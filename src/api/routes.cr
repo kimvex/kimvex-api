@@ -1,8 +1,6 @@
-require "../KemalExtends.cr"
+require "./users.cr"
 
 module ApiRoutes
-  include KExtends
-
   class Router
     def initialize(@route : String)
       # ...

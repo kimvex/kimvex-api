@@ -1,10 +1,7 @@
-require "./KemalExtends.cr"
 require "./workers.cr"
 require "./api/routes.cr"
 
 module Server
-  include KExtends
-
   class KemalServer
     def initialize
       # global = @global
