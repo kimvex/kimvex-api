@@ -1,0 +1,13 @@
+name: serviciosK
+version: 0.1.0
+
+authors:
+  - Benjamin De la Cruz MArtinez <chomi.numb.94@gmail.com>
+
+targets:
+  serviciosK:
+    main: src/serviciosK.cr
+
+crystal: 0.24.2
+
+license: MIT
