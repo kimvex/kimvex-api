@@ -1,6 +1,5 @@
-require "./serviciosK/*"
+require "./server.cr"
 
-# TODO: Write documentation for `ServiciosK`
-module ServiciosK
-  # TODO: Put your code here
-end
+ServerSK = Server::KemalServer.new
+
+ServerSK.run
