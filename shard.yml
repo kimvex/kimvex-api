@@ -8,6 +8,10 @@ targets:
   serviciosK:
     main: src/serviciosK.cr
 
+dependencies:
+  kemal:
+    github: kemalcr/kemal
+
 crystal: 0.24.2
 
 license: MIT
