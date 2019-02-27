@@ -8,6 +8,21 @@ targets:
   serviciosK:
     main: src/serviciosK.cr
 
+dependencies:
+  kemal:
+    github: kemalcr/kemal
+  jwt:
+    github: crystal-community/jwt
+  kemal-auth-token:
+    github: akwiatkowski/kemal-auth-token
+  redis:
+    github: stefanwille/crystal-redis
+    version: ~> 2.1.1
+  granite:
+    github: amberframework/granite
+  mysql:
+    github: crystal-lang/crystal-mysql
+
 crystal: 0.24.2
 
 license: MIT
