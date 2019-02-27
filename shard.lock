@@ -1,18 +1,46 @@
 version: 1.0
 shards:
+  db:
+    github: crystal-lang/crystal-db
+    version: 0.5.1
+
   exception_page:
     github: crystal-loot/exception_page
     version: 0.1.2
+
+  granite:
+    github: amberframework/granite
+    version: 0.15.2
+
+  jwt:
+    github: crystal-community/jwt
+    version: 0.4.0
 
   kemal:
     github: kemalcr/kemal
     version: 0.25.2
 
+  kemal-auth-token:
+    github: akwiatkowski/kemal-auth-token
+    commit: 4ce8d1c23ac90f7feea3cdda9ba2483d2cf029a3
+
   kilt:
     github: jeromegn/kilt
     version: 0.4.0
 
+  mysql:
+    github: crystal-lang/crystal-mysql
+    version: 0.5.1
+
+  pool:
+    github: ysbaddaden/pool
+    version: 0.2.3
+
   radix:
     github: luislavena/radix
     version: 0.3.9
+
+  redis:
+    github: stefanwille/crystal-redis
+    version: 2.1.1
 
