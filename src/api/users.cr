@@ -6,11 +6,12 @@ class Users
         password = env.params.json["password"].as(String)
 
         begin
-          user = Usersk.find_by(email: email)
+          user = ""
+          # Usersk.find_by(email: email)
 
-          if user && Token.verifyPassword(user.password) == password
+          if user && Token.verifyPassword(user) == password
             token = Token.generateToken(password)
-            REDIS.set(token, user.user_id)
+            REDIS.set(token, user)
             {token: token.to_s}.to_json
           else
             env.response.status_code = 403
@@ -34,14 +35,16 @@ class Users
         token = Token.generatePasswordHash(password)
 
         begin
-          user = Usersk.new
-          user.fullname = fullname.to_s
-          user.email = email.to_s
-          user.password = token.to_s
-          user.create_at = Time.now
-          user.save
-
-          Validations.field_db(user.errors)
+          # Usersk.create(fullname: "Granite Rocks!", email: "Check this out.", password: "dsdsd")
+          # Usersk.clear
+          # user = Usersk.new
+          # user.fullname = fullname.to_s
+          # user.email = email.to_s
+          # user.password = "ssss"
+          # # user.create_at = Time.now
+          # user.save
+          # puts user.errors[0].to_s
+          # Validations.field_db(user.errors)
 
           env.response.status_code = 200
           {message: "user create", status: 200}.to_json
@@ -60,16 +63,17 @@ class Users
     get "#{url}/users/profile" do |env|
       user_id = Authentication.current_session(env.request.headers["token"])
       begin
-        user = Usersk.find_by(user_id: user_id ? user_id.to_i : 0)
+        user = ""
+        # Usersk.find_by(user_id: user_id ? user_id.to_i : 0)
 
         if user
-          {
-            fullname:  user.fullname,
-            email:     user.email,
-            phone:     user.phone,
-            image:     user.image,
-            create_at: user.create_at,
-          }.to_json
+          # {
+          #   fullname:  user.fullname,
+          #   email:     user.email,
+          #   phone:     user.phone,
+          #   image:     user.image,
+          #   create_at: user.create_at,
+          # }.to_json
         else
           env.response.status_code = 404
           {message: "error with user data"}.to_json
