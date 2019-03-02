@@ -8,7 +8,7 @@ class Database
   @action_sql = ""
 
   def initialize
-    @db = DB.open "mysql://root@localhost/serviciotest"
+    @db = DB.open "mysql://root@localhost:3307/serviciotest"
     # @db.query "select * from usersk" do |rs|
     #   puts "#{rs.column_name(0)} #{rs.column_name(1)}"
     #   rs.each do
@@ -79,7 +79,7 @@ class Database
   end
 
   def limit(limit)
-    @query = "#{@query} LIMIT #{field}"
+    @query = "#{@query} LIMIT #{limit}"
     self
   end
 
@@ -120,9 +120,13 @@ class Database
 
   def first
     puts "#{@query} query #{@values_insert_update}"
-    query = self.execute_query
-    if query
-      query[0].to_json
+    query = self.limit(1).execute_query
+
+    if query.to_s != "[]"
+      query.not_nil![0].to_json
+    else
+      puts "User not found"
+      nil
     end
   end
 
