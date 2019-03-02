@@ -6,19 +6,22 @@ class Users
         password = env.params.json["password"].as(String)
 
         begin
-          user = ""
-          # Usersk.find_by(email: email)
+          user = DB_K
+            .select([:user_id, :password])
+            .table(:usersk)
+            .where(:email, email)
+            .first
 
-          if user && Token.verifyPassword(user) == password
+          if user && Token.verifyPassword(JSON.parse(user)["password"]) == password
             token = Token.generateToken(password)
-            REDIS.set(token, user)
+            REDIS.set(token, JSON.parse(user)["user_id"])
             {token: token.to_s}.to_json
           else
             env.response.status_code = 403
             {message: "Usario o contraseña incorrecto", status: 403}.to_json
           end
         rescue exception
-          puts exception
+          puts "#{exception} login"
         end
       else
         env.response.status_code = 400
@@ -35,16 +38,17 @@ class Users
         token = Token.generatePasswordHash(password)
 
         begin
-          # Usersk.create(fullname: "Granite Rocks!", email: "Check this out.", password: "dsdsd")
-          # Usersk.clear
-          # user = Usersk.new
-          # user.fullname = fullname.to_s
-          # user.email = email.to_s
-          # user.password = "ssss"
-          # # user.create_at = Time.now
-          # user.save
-          # puts user.errors[0].to_s
-          # Validations.field_db(user.errors)
+          user = [] of DB::Any
+
+          user << fullname.to_s
+          user << email.to_s
+          user << token.to_s
+          user << phone
+
+          DB_K
+            .table(:usersk)
+            .insert([:fullname, :email, :password, :phone], user)
+            .execute
 
           env.response.status_code = 200
           {message: "user create", status: 200}.to_json
@@ -63,17 +67,14 @@ class Users
     get "#{url}/users/profile" do |env|
       user_id = Authentication.current_session(env.request.headers["token"])
       begin
-        user = ""
-        # Usersk.find_by(user_id: user_id ? user_id.to_i : 0)
+        user = DB_K
+          .select([:fullname, :email, :phone, :image, :create_at])
+          .table(:usersk)
+          .where(:user_id, user_id)
+          .first
 
         if user
-          # {
-          #   fullname:  user.fullname,
-          #   email:     user.email,
-          #   phone:     user.phone,
-          #   image:     user.image,
-          #   create_at: user.create_at,
-          # }.to_json
+          user
         else
           env.response.status_code = 404
           {message: "error with user data"}.to_json

@@ -3,10 +3,9 @@ require "json"
 
 class Database
   @query = ""
-  @values = [] of DB::Any
-  @values_insert = [] of DB::Any
-  @results = [] of DB::Any
+  @values_insert_update = [] of DB::Any
   @db : DB::Database
+  @action_sql = ""
 
   def initialize
     @db = DB.open "mysql://root@localhost/serviciotest"
@@ -30,11 +29,23 @@ class Database
   def insert(fields = [] of DB::Any, values = [] of DB::Any)
     insert_fields = fields.map { |field| field }
     insert_values = values.map { |field| '?' }
-    values.map { |field| @values_insert << field }
+    values.map { |field| @values_insert_update << field }
     table = @query.split("FROM")
     table = table[1].lstrip
     @query = ""
     @query = "INSERT INTO #{table}(#{insert_fields.join(", ")}) VALUES (#{insert_values.join(", ")})"
+    @action_sql = "INSERT"
+    self
+  end
+
+  def update(fields = [] of DB::Any, values = [] of DB::Any)
+    update_fields = fields.map { |field| "#{field} = ?" }
+    values.map { |field| @values_insert_update << field }
+    table = @query.split("FROM")
+    table = table[1].lstrip
+    @query = ""
+    @query = "UPDATE #{table} SET #{update_fields.join(",")}"
+    @action_sql = "UPDATE"
     self
   end
 
@@ -45,19 +56,19 @@ class Database
 
   def where(field = "", value = "")
     @query = "#{@query} WHERE #{field} = ?"
-    @values << value
+    @values_insert_update << value
     self
   end
 
   def and(field = "", value = "")
     @query = "#{@query} AND #{field} = ?"
-    @values << value
+    @values_insert_update << value
     self
   end
 
   def or(field = "", value = "")
     @query = "#{@query} OR #{field} = ?"
-    @values << value
+    @values_insert_update << value
     self
   end
 
@@ -85,7 +96,8 @@ class Database
   def execute_query
     begin
       result = [] of JSON::Any
-      @db.query("#{@query}", @values) do |results|
+
+      @db.query("#{@query}", @values_insert_update) do |results|
         column_names = results.column_names
         results.each do
           if results.column_count > 0
@@ -97,19 +109,43 @@ class Database
           end
         end
       end
+      self.clear
       result
     rescue exception
-      error = "#{exception}"
+      error = "#{exception} execute_query"
+      self.clear
       puts error
+    end
+  end
+
+  def first
+    puts "#{@query} query #{@values_insert_update}"
+    query = self.execute_query
+    if query
+      query[0].to_json
     end
   end
 
   def execute
     begin
-      @db.exec "#{@query}", @values_insert
+      case @action_sql
+      when "INSERT"
+        @db.exec "#{@query}", @values_insert_update
+        puts "Insert success"
+      when "UPDATE"
+        puts "#{@query}"
+        @db.exec("#{@query}", @values_insert_update)
+        puts "Update success"
+      end
+      self.clear
     rescue exception
       error = "#{exception}"
 
+      self.clear
+
+      if error.includes?("Duplicate entry")
+        raise Exception.new("The mail is already registered")
+      end
       puts error
     end
   end
@@ -126,5 +162,10 @@ class Database
     json_data = JSON.parse(json_data)
 
     json_data
+  end
+
+  private def clear
+    @values_insert_update.clear
+    @query = ""
   end
 end
