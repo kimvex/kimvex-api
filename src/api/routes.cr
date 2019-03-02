@@ -1,4 +1,5 @@
 require "./users.cr"
+require "./shop.cr"
 require "../helpers/routes-exclude"
 
 module ApiRoutes
@@ -22,6 +23,7 @@ module ApiRoutes
       end
 
       Users.setPathApi(@route)
+      Shop.setPathApi(@route)
     end
   end
 end
