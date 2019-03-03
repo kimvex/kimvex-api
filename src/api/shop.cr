@@ -24,7 +24,7 @@ class Shop
           shop << phone2
           shop << description
           shop << cover_image
-          shop << env.params.json.has_key?("accept_card") ? true : false
+          shop << accept_card
           shop << list_cards
           shop << type_s
           shop << lat
