@@ -29,9 +29,6 @@ class Cloudinary
 
       headers = HTTP::Headers{"Content-Type" => channel.receive, "api_key" => @api_key}
       response = HTTP::Client.post("https://api.cloudinary.com/v1_1/#{@cloud_name}/image/upload", body: reader, headers: headers)
-
-      puts "Response code #{response.status_code}"
-      puts "File path: #{response.body}"
       response.body
     end
   end
