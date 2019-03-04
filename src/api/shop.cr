@@ -54,6 +54,21 @@ class Shop
         end
       end
     end
+
+    get "#{url}/shop/:shop_id" do |env|
+      shop_id = env.params.url["shop_id"]
+      # user_id = Authentication.current_session(env.request.headers["token"])
+      shop_result = DB_K
+        .select([:*])
+        .table(:shop)
+        .join(:LEFT, :images_shop, [:url_image], [:shop_id, :shop_id])
+        .join(:LEFT, :shop_schedules, [:LUN], [:shop_id, :shop_id])
+        .join(:LEFT, :shop_comments, [:comment], [:shop_id, :shop_id])
+        .where(:shop_id, shop_id)
+        .first
+
+      shop_result
+    end
   end
 
   def self.validateField(field, env)

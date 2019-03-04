@@ -3,9 +3,12 @@ require "json"
 
 class Database
   @query = ""
+  @table = ""
+  @tables_join = [] of DB::Any
   @values_insert_update = [] of DB::Any
   @db : DB::Database
   @action_sql = ""
+  @select_concat = ""
 
   def initialize
     @db = DB.open "mysql://root@localhost:3307/serviciotest"
@@ -22,7 +25,7 @@ class Database
 
   def select(fields = [] of DB::Any)
     select_list = fields.map { |field| field }
-    @query = "SELECT #{select_list.join(", ")}"
+    @query = "SELECT #{select_list.join(",")}"
     self
   end
 
@@ -50,12 +53,17 @@ class Database
   end
 
   def table(table = "")
+    @table = "#{table}"
     @query = "#{@query} FROM #{table}"
     self
   end
 
   def where(field = "", value = "")
-    @query = "#{@query} WHERE #{field} = ?"
+    if @query.includes?("JOIN")
+      @query = "#{@query} WHERE #{@table}.#{field} = ?"
+    else
+      @query = "#{@query} WHERE #{field} = ?"
+    end
     @values_insert_update << value
     self
   end
@@ -93,10 +101,35 @@ class Database
     self
   end
 
+  def join(position, table, selects = [] of DB::Any, clause = [] of DB::Any)
+    query_sql_plit = @query.split(" ")[1].lstrip
+    query_sql_principal = query_sql_plit.split(",").map { |field| field.includes?(".") ? field : "#{@table}.#{field}" }
+    query_sql_join = selects.map { |field| "#{table}.#{field}" }
+    if @query.includes?("JOIN")
+      split_query = @query.split("SELECT ")
+      puts split_query
+      @query = "SELECT #{split_query[0]}#{query_sql_join.join(",")},#{split_query[1]} #{position} JOIN #{table} ON #{@table}.#{clause[0]} = #{table}.#{clause[1]}"
+    else
+      @query = "SELECT #{query_sql_principal[0]},#{query_sql_join.join(",")} FROM #{@table} #{position} JOIN #{table} ON #{@table}.#{clause[0]} = #{table}.#{clause[1]}"
+    end
+    self
+  end
+
+  def first
+    puts "#{@query} query #{@values_insert_update}"
+    query = self.limit(1).execute_query
+    puts query.to_s
+    if query.to_s != "[]"
+      query.not_nil![0].to_json
+    else
+      puts "User not found"
+      "{}"
+    end
+  end
+
   def execute_query
     begin
-      result = [] of JSON::Any
-
+      result = [] of Hash(String, JSON::Any)
       @db.query("#{@query}", @values_insert_update) do |results|
         column_names = results.column_names
         results.each do
@@ -115,18 +148,6 @@ class Database
       error = "#{exception} execute_query"
       self.clear
       puts error
-    end
-  end
-
-  def first
-    puts "#{@query} query #{@values_insert_update}"
-    query = self.limit(1).execute_query
-
-    if query.to_s != "[]"
-      query.not_nil![0].to_json
-    else
-      puts "User not found"
-      nil
     end
   end
 
@@ -158,14 +179,20 @@ class Database
     json_data = JSON.build do |json|
       json.object do
         column_names.each do |field_s|
-          json.field "#{field_s}", "#{rs.read(DB::Any)}"
+          json.field "#{field_s}", "#{rs.read(DB::Any | Int8)}"
         end
       end
     end
 
-    json_data = JSON.parse(json_data)
+    convert_to_hash = Hash(String, JSON::Any).from_json(json_data)
+    convert_to_hash.each do |key, value|
+      begin
+        convert_to_hash[key] = JSON.parse(value.to_s)
+      rescue exception
+      end
+    end
 
-    json_data
+    convert_to_hash
   end
 
   private def clear
