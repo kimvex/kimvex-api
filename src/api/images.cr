@@ -19,7 +19,7 @@ class Images
       {result: response_result["url"]}.to_json
     end
 
-    post "#{url}/images/shop/avatar" do |env|
+    post "#{url}/images/avatar" do |env|
       response_result = ""
       HTTP::FormData.parse(env.request) do |upload|
         result_cover = CLOUDINARY.upload(upload, "avatar")
