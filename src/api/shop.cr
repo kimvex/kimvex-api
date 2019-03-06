@@ -59,12 +59,29 @@ class Shop
       shop_id = env.params.url["shop_id"]
       # user_id = Authentication.current_session(env.request.headers["token"])
       shop_result = DB_K
-        .select([:*])
+        .select([
+        :shop_id,
+        :shop_name,
+        :address,
+        :phone,
+        :phone2,
+        :description,
+        :cover_image,
+        :accept_card,
+        :list_cards,
+        :type_s,
+        :lat,
+        :lon,
+        :score_shop,
+        :status,
+      ])
         .table(:shop)
         .join(:LEFT, :images_shop, [:url_image], [:shop_id, :shop_id])
-        .join(:LEFT, :shop_schedules, [:LUN], [:shop_id, :shop_id])
+        .join(:LEFT, :shop_schedules, [:LUN, :MAR], [:shop_id, :shop_id])
         .join(:LEFT, :shop_comments, [:comment], [:shop_id, :shop_id])
+        # .join(:LEFT, :shop_score_users, [:score], [:shop_id, :shop_id])
         .where(:shop_id, shop_id)
+        # .avg(:score, :score_for_shop)
         .first
 
       shop_result
