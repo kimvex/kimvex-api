@@ -9,4 +9,5 @@ ONLY_ROUTES = [
   "/api/images/avatar",
   "/api/images/shop/logo",
   "/api/images/shop/cover",
+  "/api/images/shop",
 ]
