@@ -26,6 +26,7 @@ class Database
   def select(fields = [] of DB::Any)
     select_list = fields.map { |field| field }
     @query = "SELECT #{select_list.join(",")}"
+    # puts @query
     self
   end
 
@@ -96,29 +97,65 @@ class Database
     self
   end
 
-  def group_by(field)
-    @query = "#{@query} #{field}"
+  def group_by(fields = [] of DB::Any)
+    group_fields = fields.split(",").map { |field|
+      if !field.includes?("AVG")
+        field
+      end
+    }
+    @query = "#{@query} GROUP BY #{group_fields.join(",")}"
     self
   end
 
   def join(position, table, selects = [] of DB::Any, clause = [] of DB::Any)
     query_sql_plit = @query.split(" ")[1].lstrip
-    query_sql_principal = query_sql_plit.split(",").map { |field| field.includes?(".") ? field : "#{@table}.#{field}" }
+    query_sql_principal = query_sql_plit.split(",").map { |field|
+      field.includes?(".") ? field : "#{@table}.#{field}"
+    }
     query_sql_join = selects.map { |field| "#{table}.#{field}" }
+
     if @query.includes?("JOIN")
       split_query = @query.split("SELECT ")
-      puts split_query
-      @query = "SELECT #{split_query[0]}#{query_sql_join.join(",")},#{split_query[1]} #{position} JOIN #{table} ON #{@table}.#{clause[0]} = #{table}.#{clause[1]}"
+      @query = "#{split_query[0]}#{query_sql_join.join(",")},#{split_query[1]} #{position} JOIN #{table} ON #{@table}.#{clause[0]} = #{table}.#{clause[1]}"
     else
-      @query = "SELECT #{query_sql_principal[0]},#{query_sql_join.join(",")} FROM #{@table} #{position} JOIN #{table} ON #{@table}.#{clause[0]} = #{table}.#{clause[1]}"
+      @query = "#{query_sql_principal.join(",")},#{query_sql_join.join(",")} FROM #{@table} #{position} JOIN #{table} ON #{@table}.#{clause[0]} = #{table}.#{clause[1]}"
     end
+
+    @query = "SELECT #{@query}"
+    self
+  end
+
+  def avg(field, alias_as)
+    index = 0
+    query = @query.split(" ")[1].lstrip
+    restructure_query_select = query.split(",").map { |field_map|
+      index = field_map.index(".#{field}")
+      value_equal = ""
+
+      if index
+        value_equal = "#{field_map}"[index..-1]
+      end
+
+      if field_map.includes?(".#{field}") && value_equal == ".#{field}"
+        field_map.gsub("#{field_map}", "AVG(#{field_map}) AS #{alias_as}")
+      elsif field_map.includes?("#{field}") && value_equal == ".#{field}"
+        field_map.gsub("#{field}", "AVG(#{field}) AS #{alias_as}")
+      else
+        field_map
+      end
+    }
+
+    @query = "SELECT #{restructure_query_select.join(",")} #{@query.split("#{restructure_query_select.last}")[1]}"
+
+    group_by(query)
+
     self
   end
 
   def first
     puts "#{@query} query #{@values_insert_update}"
     query = self.limit(1).execute_query
-    puts query.to_s
+    # puts query.to_s
     if query.to_s != "[]"
       query.not_nil![0].to_json
     else
@@ -198,5 +235,8 @@ class Database
   private def clear
     @values_insert_update.clear
     @query = ""
+    @table = ""
+    @action_sql = ""
+    @select_concat = ""
   end
 end
