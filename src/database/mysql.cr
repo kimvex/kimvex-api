@@ -70,7 +70,11 @@ class Database
   end
 
   def and(field = "", value = "")
-    @query = "#{@query} AND #{field} = ?"
+    if @query.includes?("JOIN")
+      @query = "#{@query} AND #{@table}.#{field} = ?"
+    else
+      @query = "#{@query} WHERE #{field} = ?"
+    end
     @values_insert_update << value
     self
   end
@@ -97,7 +101,10 @@ class Database
     self
   end
 
-  def group_by(fields = [] of DB::Any)
+  def group_by(fields = "")
+    if fields
+      fields = @query.split(" ")[1].lstrip
+    end
     group_fields = fields.split(",").map { |field|
       if !field.includes?("AVG")
         field
@@ -149,6 +156,15 @@ class Database
 
     group_by(query)
 
+    self
+  end
+
+  def as_query(field, alias_as)
+    if @query.includes?("JOIN")
+      @query = @query.gsub("#{@table}.#{field}", "#{@table}.#{field} AS #{alias_as}")
+    else
+      @query = @query.gsub("#{field}", "#{field} AS #{alias_as}")
+    end
     self
   end
 
