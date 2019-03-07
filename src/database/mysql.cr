@@ -103,7 +103,7 @@ class Database
 
   def group_by(fields = "")
     if fields
-      fields = @query.split(" ")[1].lstrip
+      fields = fields.split(" ")[1].lstrip
     end
     group_fields = fields.split(",").map { |field|
       if !field.includes?("AVG")
@@ -111,6 +111,21 @@ class Database
       end
     }
     @query = "#{@query} GROUP BY #{group_fields.join(",")}"
+    self
+  end
+
+  def group_concat(args = [] of DB::Any, order_by = "", alias_as = "")
+    field, table, alias_field = args
+    query = @query
+
+    if @query.includes?("JOIN")
+      @query = @query.gsub("#{table}.#{field}", "concat('[',GROUP_CONCAT(json_object('#{alias_field}',#{table}.#{field})),']') AS #{alias_as}")
+    else
+      @query = @query.gsub("#{field}", "concat('[',GROUP_CONCAT(json_object('#{alias_field}',#{field})),']') AS #{alias_as}")
+    end
+
+    group_by(query)
+    removeField(field, table)
     self
   end
 
@@ -134,7 +149,8 @@ class Database
 
   def avg(field, alias_as)
     index = 0
-    query = @query.split(" ")[1].lstrip
+    query = @query
+
     restructure_query_select = query.split(",").map { |field_map|
       index = field_map.index(".#{field}")
       value_equal = ""
@@ -205,11 +221,13 @@ class Database
   end
 
   def execute
+    last_result = ""
     begin
       case @action_sql
       when "INSERT"
-        @db.exec "#{@query}", @values_insert_update
+        result = @db.exec "#{@query}", @values_insert_update
         puts "Insert success"
+        last_result = result.last_insert_id
       when "UPDATE"
         puts "#{@query}"
         @db.exec("#{@query}", @values_insert_update)
@@ -226,6 +244,8 @@ class Database
       end
       puts error
     end
+
+    last_result
   end
 
   private def toJson(rs, column_names)
@@ -246,6 +266,27 @@ class Database
     end
 
     convert_to_hash
+  end
+
+  private def removeField(field, table)
+    query = @query.split("GROUP BY ")[1]
+    field_arr = [] of DB::Any
+
+    list_group = query.split(",").each do |v_field|
+      if @query.includes?("JOIN")
+        if v_field != "#{table}.#{field}"
+          field_arr << "#{v_field}"
+        end
+      else
+        if v_field != "#{field}"
+          field_arr << "#{v_field}"
+        end
+      end
+    end
+
+    @query = "#{@query.split("GROUP BY ")[0]} GROUP BY #{field_arr.join(",")}"
+
+    self
   end
 
   private def clear
