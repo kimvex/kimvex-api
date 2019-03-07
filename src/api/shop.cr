@@ -14,6 +14,7 @@ class Shop
           accept_card = validateField("accept_card", env)
           list_cards = validateField("list_cards", env)
           type_s = validateField("type_s", env)
+          service_type = validateField("service_type", env)
           lat = validateField("lat", env)
           lon = validateField("lon", env)
 
@@ -34,7 +35,7 @@ class Shop
           shop << user_id
           shop << logo
 
-          DB_K
+          shop_id_insert = DB_K
             .table(:shop)
             .insert([:shop_name, :address, :phone, :phone2, :description, :cover_image, :accept_card, :list_cards, :type_s, :lat, :lon, :score_shop, :user_id, :logo], shop)
             .execute
@@ -44,9 +45,16 @@ class Shop
               puts url
               DB_K
                 .table(:images_shop)
-                .insert([:url_image, :shop_id], [url, user_id.to_s])
+                .insert([:url_image, :shop_id], [url, shop_id_insert.to_s])
                 .execute
             end
+          end
+
+          if env.params.json.has_key?("service_type")
+            DB_K
+              .table(:type_service)
+              .insert([:service, :shop_id], [service_type, shop_id_insert.to_s])
+              .execute
           end
 
           env.response.status_code = 200
@@ -92,12 +100,9 @@ class Shop
         .join(:LEFT, :images_shop, [:url_image], [:shop_id, :shop_id])
         .join(:LEFT, :shop_schedules, [:LUN, :MAR, :MIE, :JUE, :VIE, :SAB, :DOM], [:shop_id, :shop_id])
         .join(:LEFT, :usersk, [:user_id], [:user_id, :user_id])
-        .join(:LEFT, :shop_comments, [:comment], [:shop_id, :shop_id])
-        # .join(:LEFT, :shop_score_users, [:score], [:shop_id, :shop_id])
         .where(:shop_id, shop_id)
         .and(:user_id, user_id)
         .group_concat([:url_image, :images_shop, :url], :image_id, :images)
-        # .avg(:score, :score_for_shop)
         .first
 
       # url_image = DB_K

@@ -221,11 +221,13 @@ class Database
   end
 
   def execute
+    last_result = ""
     begin
       case @action_sql
       when "INSERT"
-        @db.exec "#{@query}", @values_insert_update
+        result = @db.exec "#{@query}", @values_insert_update
         puts "Insert success"
+        last_result = result.last_insert_id
       when "UPDATE"
         puts "#{@query}"
         @db.exec("#{@query}", @values_insert_update)
@@ -242,6 +244,8 @@ class Database
       end
       puts error
     end
+
+    last_result
   end
 
   private def toJson(rs, column_names)
