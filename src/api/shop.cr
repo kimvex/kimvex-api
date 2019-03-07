@@ -89,28 +89,29 @@ class Shop
         :status,
       ])
         .table(:shop)
-        # .join(:LEFT, :images_shop, [:url_image], [:shop_id, :shop_id])
+        .join(:LEFT, :images_shop, [:url_image], [:shop_id, :shop_id])
         .join(:LEFT, :shop_schedules, [:LUN, :MAR, :MIE, :JUE, :VIE, :SAB, :DOM], [:shop_id, :shop_id])
         .join(:LEFT, :usersk, [:user_id], [:user_id, :user_id])
         .join(:LEFT, :shop_comments, [:comment], [:shop_id, :shop_id])
         # .join(:LEFT, :shop_score_users, [:score], [:shop_id, :shop_id])
         .where(:shop_id, shop_id)
         .and(:user_id, user_id)
+        .group_concat([:url_image, :images_shop, :url], :image_id, :images)
         # .avg(:score, :score_for_shop)
         .first
 
-      url_image = DB_K
-        .select([:url_image])
-        .table(:images_shop)
-        .where(:shop_id, shop_id)
-        .as_query(:url_image, "url")
-        .execute_query
-        .to_json
+      # url_image = DB_K
+      #   .select([:url_image])
+      #   .table(:images_shop)
+      #   .where(:shop_id, shop_id)
+      #   .as_query(:url_image, "url")
+      #   .execute_query
+      #   .to_json
 
-      shop_result_hash = Hash(String, JSON::Any).from_json(shop_result)
-      shop_result_hash["images"] = JSON.parse(url_image)
+      # shop_result_hash = Hash(String, JSON::Any).from_json(shop_result)
+      # shop_result_hash["images"] = JSON.parse(url_image)
 
-      shop_result_hash.to_json
+      shop_result
     end
   end
 
