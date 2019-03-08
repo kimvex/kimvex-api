@@ -18,10 +18,13 @@ dependencies:
   redis:
     github: stefanwille/crystal-redis
     version: ~> 2.1.1
-  granite:
-    github: amberframework/granite
   mysql:
     github: crystal-lang/crystal-mysql
+  mongo:
+    github: datanoise/mongo.cr
+    branch: master
+  bson:
+    github: jeromegn/bson.cr
 
 crystal: 0.24.2
 
