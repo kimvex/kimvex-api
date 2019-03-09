@@ -50,3 +50,17 @@ MONGO.insert("shop", {
   "location" => {"type" => "Point", "coordinates" => [-73.9375, 40.8303]},
   "category" => "Stadiums",
 })
+
+# Busqueda con la libreria
+puts MONGO.find({
+  "location" => {
+    "$near" => {
+      "$geometry" => {
+        "type"        => "Point",
+        "coordinates" => [-73.9667, 40.78],
+      },
+      "$minDistance" => 1000,
+      "$maxDistance" => 100000,
+    },
+  },
+}, "shop")
