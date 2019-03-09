@@ -40,9 +40,34 @@ class Shop
             .insert([:shop_name, :address, :phone, :phone2, :description, :cover_image, :accept_card, :list_cards, :type_s, :lat, :lon, :score_shop, :user_id, :logo], shop)
             .execute
 
+          begin
+            puts MONGO.find({
+              "location" => {
+                "$near" => {
+                  "$geometry" => {
+                    "type"        => "Point",
+                    "coordinates" => ["#{env.params.json["lon"]}".to_f, "#{env.params.json["lat"]}".to_f],
+                  },
+                  "$minDistance" => 0,
+                  "$maxDistance" => 100000,
+                },
+              },
+            }, "shop")
+          rescue exception
+            puts exception
+          end
+          MONGO.insert("shop", {
+            "name"     => shop_name.to_s,
+            "shop_id"  => shop_id_insert.to_s,
+            "location" => {
+              "type"        => "Point",
+              "coordinates" => ["#{env.params.json["lon"]}".to_f, "#{env.params.json["lat"]}".to_f],
+            },
+            "category" => type_s.to_s,
+          })
+
           if env.params.json.has_key?("list_images")
             Array(String).from_json("#{env.params.json["list_images"]}") do |url|
-              puts url
               DB_K
                 .table(:images_shop)
                 .insert([:url_image, :shop_id], [url, shop_id_insert.to_s])
@@ -56,6 +81,12 @@ class Shop
               .insert([:service, :shop_id], [service_type, shop_id_insert.to_s])
               .execute
           end
+
+          # MONGO.insert("shop", {
+          #   "name"     => "Central Park",
+          #   "location" => {"type" => "Point", "coordinates" => [-73.97, 40.77]},
+          #   "category" => "Parks",
+          # })
 
           env.response.status_code = 200
           {message: "Create shop success", status: 200}.to_json
@@ -126,7 +157,7 @@ class Shop
         env.params.json["accept_card"] == true ? true : false
       end
     else
-      env.params.json.has_key?("#{field}") ? (field == "phone" || field == "phone2" ? (env.params.json["#{field}"].to_s).to_i : env.params.json["#{field}"].to_s) : nil
+      env.params.json.has_key?("#{field}") ? (field == "phone" || field == "phone2" ? (env.params.json["#{field}"].to_s).to_i : env.params.json["#{field}"].to_s) : ""
     end
   end
 end
