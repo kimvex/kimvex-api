@@ -6,6 +6,7 @@ ROUTES_EXCLUDE = [
 ONLY_ROUTES = [
   "/api/users/profile",
   "/api/users/logout",
+  "/api/users/update/profile",
   "/api/shop",
   "/api/images/avatar",
   "/api/images/shop/logo",
