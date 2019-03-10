@@ -13,7 +13,8 @@ class Users
             .first
 
           if user.empty?
-            {message: "El usuario no existe", status: 401}.to_json
+            env.response.status_code = 404
+            {message: "El usuario no existe", status: 404}.to_json
           elsif user && Token.verifyPassword(user["password"]) == password
             token = Token.generateToken(password)
             REDIS.set(token, user["user_id"])
