@@ -189,10 +189,11 @@ class Database
     query = self.limit(1).execute_query
     # puts query.to_s
     if query.to_s != "[]"
-      query.not_nil![0].to_json
+      query.not_nil![0]
     else
       puts "User not found"
-      "{}"
+      hash_result_empty = {} of String => JSON::Any
+      hash_result_empty
     end
   end
 
