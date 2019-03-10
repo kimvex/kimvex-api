@@ -12,7 +12,10 @@ class Users
             .where(:email, email)
             .first
 
-          if user && Token.verifyPassword(JSON.parse(user)["password"]) == password
+          puts user
+          if !user.empty?
+            {message: "El usuario no existe", status: 401}.to_json
+          elsif user && Token.verifyPassword(JSON.parse(user)["password"]) == password
             token = Token.generateToken(password)
             REDIS.set(token, JSON.parse(user)["user_id"])
             {token: token.to_s}.to_json
@@ -22,6 +25,7 @@ class Users
           end
         rescue exception
           puts "#{exception} login"
+          {message: "Usario o contraseña incorrecto", status: 401}.to_json
         end
       else
         env.response.status_code = 400
