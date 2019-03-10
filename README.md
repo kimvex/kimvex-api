@@ -1,27 +1,25 @@
-# serviciosK
+# Kimvex
 
-TODO: Write a description here
+Api para servicio kimvex
 
 ## Installation
 
-TODO: Write installation instructions here
+[http://mongoc.org/libmongoc/current/installing.html](http://mongoc.org/libmongoc/current/installing.html)
+
+Instalacion de driver de base de datos para mongodb
+$ wget https://github.com/mongodb/mongo-c-driver/releases/download/1.14.0/mongo-c-driver-1.14.0.tar.gz
+$ tar -zxvf mongo-c-driver-1.14.0.tar.gz && cd mongo-c-driver-1.14.0/
+$ mkdir cmake-build
+$ cd cmake-build
+\$ cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF ..
+
+$ make
+$ sudo make install
 
 ## Usage
 
-TODO: Write usage instructions here
+Para prueba se ejecuta
 
 ## Development
 
-TODO: Write development instructions here
-
-## Contributing
-
-1. Fork it ( https://github.com/[your-github-name]/serviciosK/fork )
-2. Create your feature branch (git checkout -b my-new-feature)
-3. Commit your changes (git commit -am 'Add some feature')
-4. Push to the branch (git push origin my-new-feature)
-5. Create a new Pull Request
-
-## Contributors
-
-- [[your-github-name]](https://github.com/[your-github-name]) Benjamin De la Cruz MArtinez - creator, maintainer
+crystal run src/init.cr --error-trace
