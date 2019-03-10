@@ -11,7 +11,7 @@ class Database
   @select_concat = ""
 
   def initialize
-    @db = DB.open "mysql://root@localhost:3307/serviciotest"
+    @db = DB.open "mysql://root@localhost:3306/serviciotest"
     # @db.query "select * from usersk" do |rs|
     #   puts "#{rs.column_name(0)} #{rs.column_name(1)}"
     #   rs.each do

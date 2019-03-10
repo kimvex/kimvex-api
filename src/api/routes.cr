@@ -10,6 +10,10 @@ module ApiRoutes
         response.headers.add("Access-Control-Allow-Origin", "*")
       end
 
+      error 404 do
+        {message: "Does not exist", status: 404}.to_json
+      end
+
       error 401 do
         {message: "Not authorization", status: 401}.to_json
       end
