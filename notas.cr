@@ -64,3 +64,34 @@ puts MONGO.find({
     },
   },
 }, "shop")
+
+# Obtener un dato con alias
+# url_image = DB_K
+#   .select([:url_image])
+#   .table(:images_shop)
+#   .where(:shop_id, shop_id)
+#   .as_query(:url_image, "url")
+#   .execute_query
+#   .to_json
+
+# Convertir de hash un json
+# shop_result_hash = Hash(String, JSON::Any).from_json(shop_result)
+# shop_result_hash["images"] = JSON.parse(url_image)
+
+# Busqueda de tiendas por localizacion
+# begin
+#   puts MONGO.find({
+#     "location" => {
+#       "$near" => {
+#         "$geometry" => {
+#           "type"        => "Point",
+#           "coordinates" => ["#{env.params.json["lon"]}".to_f, "#{env.params.json["lat"]}".to_f],
+#         },
+#         "$minDistance" => 0,
+#         "$maxDistance" => 100000,
+#       },
+#     },
+#   }, "shop")
+# rescue exception
+#   puts exception
+# end
