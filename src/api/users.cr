@@ -94,6 +94,8 @@ class Users
     post "#{url}/users/logout" do |env|
       begin
         REDIS.del("#{env.request.headers["token"]}")
+        env.response.status_code = 200
+        {message: "Sesion cerrada"}.to_json
       rescue exception
         puts "#{exception} logout"
 
