@@ -90,5 +90,17 @@ class Users
         {message: "error with user data"}.to_json
       end
     end
+
+    post "#{url}/users/logout" do |env|
+      begin
+        REDIS.del("#{env.request.headers["token"]}")
+        env.response.status_code = 200
+        {message: "Sesion cerrada"}.to_json
+      rescue exception
+        puts "#{exception} logout"
+
+        {message: "Error al cerrar sesion"}.to_json
+      end
+    end
   end
 end
