@@ -40,22 +40,6 @@ class Shop
             .insert([:shop_name, :address, :phone, :phone2, :description, :cover_image, :accept_card, :list_cards, :type_s, :lat, :lon, :score_shop, :user_id, :logo], shop)
             .execute
 
-          begin
-            puts MONGO.find({
-              "location" => {
-                "$near" => {
-                  "$geometry" => {
-                    "type"        => "Point",
-                    "coordinates" => ["#{env.params.json["lon"]}".to_f, "#{env.params.json["lat"]}".to_f],
-                  },
-                  "$minDistance" => 0,
-                  "$maxDistance" => 100000,
-                },
-              },
-            }, "shop")
-          rescue exception
-            puts exception
-          end
           MONGO.insert("shop", {
             "name"     => shop_name.to_s,
             "shop_id"  => shop_id_insert.to_s,
@@ -67,12 +51,14 @@ class Shop
           })
 
           if env.params.json.has_key?("list_images")
-            Array(String).from_json("#{env.params.json["list_images"]}") do |url|
+            list_images_array = Array(String).from_json("#{env.params.json["list_images"]}")
+
+            list_images_array.each { |url|
               DB_K
                 .table(:images_shop)
                 .insert([:url_image, :shop_id], [url, shop_id_insert.to_s])
                 .execute
-            end
+            }
           end
 
           if env.params.json.has_key?("service_type")
@@ -81,12 +67,6 @@ class Shop
               .insert([:service, :shop_id], [service_type, shop_id_insert.to_s])
               .execute
           end
-
-          # MONGO.insert("shop", {
-          #   "name"     => "Central Park",
-          #   "location" => {"type" => "Point", "coordinates" => [-73.97, 40.77]},
-          #   "category" => "Parks",
-          # })
 
           env.response.status_code = 200
           {message: "Create shop success", status: 200}.to_json
@@ -135,17 +115,6 @@ class Shop
         .and(:user_id, user_id)
         .group_concat([:url_image, :images_shop, :url], :image_id, :images)
         .first
-
-      # url_image = DB_K
-      #   .select([:url_image])
-      #   .table(:images_shop)
-      #   .where(:shop_id, shop_id)
-      #   .as_query(:url_image, "url")
-      #   .execute_query
-      #   .to_json
-
-      # shop_result_hash = Hash(String, JSON::Any).from_json(shop_result)
-      # shop_result_hash["images"] = JSON.parse(url_image)
 
       shop_result
     end

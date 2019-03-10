@@ -5,7 +5,7 @@ class MongoDB
   @client : Mongo::Database
 
   def initialize(url = "", dbName = "")
-    @mongo = Mongo::Client.new "mongodb://localhost:27017/kmv"
+    @mongo = Mongo::Client.new "mongodb://localhost:27018/"
 
     @client = @mongo[dbName]
   end
