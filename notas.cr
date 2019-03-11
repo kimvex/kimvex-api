@@ -101,3 +101,13 @@ puts MONGO.find({
 # DB_K.table(:usersk).insert([:fullname, :email, :password], ["chomin", "benjamin5@kimvex.com", "sfddsfsdfsdf"]).execute
 # DB_K.table(:usersk).update([:fullname, :phone], ["Ben", 333333]).where(:email, "benjamin0@kimvex.com").or(:email, "benjamin3@kimvex.com").execute
 # puts DB_K.select([:email, :password, :phone]).table(:usersk).where(:email, "benjamin@kimvex.com").first
+
+# Busqueda en base de datos de la libreria
+# @db.query "select * from usersk" do |rs|
+#   puts "#{rs.column_name(0)} #{rs.column_name(1)}"
+#   rs.each do
+#     puts JSON.parse(rs.read(DB::Database))
+#     puts rs.read(DB::Any)
+#     puts rs.read(String | Int32)
+#   end
+# end
