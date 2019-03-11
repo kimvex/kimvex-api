@@ -12,14 +12,6 @@ class Database
 
   def initialize
     @db = DB.open "mysql://root@localhost:3306/serviciotest"
-    # @db.query "select * from usersk" do |rs|
-    #   puts "#{rs.column_name(0)} #{rs.column_name(1)}"
-    #   rs.each do
-    #     puts JSON.parse(rs.read(DB::Database))
-    #     puts rs.read(DB::Any)
-    #     puts rs.read(String | Int32)
-    #   end
-    # end
     @db
   end
 

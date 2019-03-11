@@ -37,7 +37,9 @@ class Users
         password = env.params.json["password"]
         email = env.params.json["email"]
         fullname = env.params.json["fullname"]
+        age = env.params.json.has_key?("age") ? (env.params.json["age"].to_s).to_i : nil
         phone = env.params.json.has_key?("phone") ? (env.params.json["phone"].to_s).to_i : nil
+        gender = env.params.json.has_key?("gender") ? env.params.json["gender"].to_s : nil
 
         token = Token.generatePasswordHash(password)
 
@@ -47,11 +49,13 @@ class Users
           user << fullname.to_s
           user << email.to_s
           user << token.to_s
+          user << age
           user << phone
+          user << gender
 
           DB_K
             .table(:usersk)
-            .insert([:fullname, :email, :password, :phone], user)
+            .insert([:fullname, :email, :password, :age, :phone, :gender], user)
             .execute
 
           env.response.status_code = 200
@@ -72,7 +76,7 @@ class Users
       user_id = Authentication.current_session(env.request.headers["token"])
       begin
         user = DB_K
-          .select([:fullname, :email, :phone, :image, :create_at])
+          .select([:fullname, :email, :phone, :age, :gender, :image, :create_at])
           .table(:usersk)
           .where(:user_id, user_id)
           .first
