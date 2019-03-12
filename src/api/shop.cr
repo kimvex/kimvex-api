@@ -118,6 +118,27 @@ class Shop
 
       shop_result
     end
+    get "#{url}/shops/:lat/:lon" do |env|
+      get_shops = MONGO.find({
+        "location" => {
+          "$near" => {
+            "$geometry" => {
+              "type"        => "Point",
+              "coordinates" => ["#{env.params.json["lon"]}".to_f, "#{env.params.json["lat"]}".to_f],
+            },
+            "$minDistance" => 0,
+            "$maxDistance" => 100000,
+          },
+        },
+      }, "shop")
+
+      result_properties = [] of JSON::Any
+
+      get_shops.each { |properties|
+        DB_K
+          .select([:shop_id, :shop_name, :address, :phone, :score_shop, :cover_image, :type_s])
+      }
+    end
   end
 
   def self.validateField(field, env)
