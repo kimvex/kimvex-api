@@ -37,6 +37,18 @@ class MongoDB
     result
   end
 
+  def aggregate(query = [] of Hash::Any, collection = "")
+    result = ""
+
+    result = @client["#{collection}"].aggregate(query)
+    response = [] of Hash(String, JSON::Any)
+    result.to_a.each do |_values_of_json|
+      response << Hash(String, JSON::Any).from_json(_values_of_json.to_json)
+    end
+
+    response
+  end
+
   def find_one(query = [] of Hash::Any, collection = "")
     result = ""
     skip = 0

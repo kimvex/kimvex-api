@@ -61,6 +61,17 @@ class Database
     self
   end
 
+  def where_in(field = "", value = [] of JSON::Any)
+    if @query.includes?("JOIN")
+      @query = "#{@query} WHERE #{@table}.#{field} IN (#{value.map { |field| '?' }.join(",")})"
+    else
+      @query = "#{@query} WHERE #{field} IN (#{value.map { |field| '?' }.join(",")})"
+    end
+
+    value.map { |field| @values_insert_update << "#{field}".to_s.to_i }
+    self
+  end
+
   def and(field = "", value = "")
     if @query.includes?("JOIN")
       @query = "#{@query} AND #{@table}.#{field} = ?"
@@ -192,6 +203,8 @@ class Database
   def execute_query
     begin
       result = [] of Hash(String, JSON::Any)
+      puts @query
+      puts @values_insert_update
       @db.query("#{@query}", @values_insert_update) do |results|
         column_names = results.column_names
         results.each do
