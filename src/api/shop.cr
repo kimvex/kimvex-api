@@ -119,25 +119,45 @@ class Shop
       shop_result
     end
     get "#{url}/shops/:lat/:lon" do |env|
-      get_shops = MONGO.find({
-        "location" => {
-          "$near" => {
-            "$geometry" => {
+      get_shops = MONGO.aggregate([
+        {
+          "$geoNear" => {
+            "near" => {
               "type"        => "Point",
-              "coordinates" => ["#{env.params.json["lon"]}".to_f, "#{env.params.json["lat"]}".to_f],
+              "coordinates" => ["#{env.params.url["lon"]}".to_f, "#{env.params.url["lat"]}".to_f],
             },
-            "$minDistance" => 0,
-            "$maxDistance" => 100000,
+            "maxDistance"   => 100000,
+            "spherical"     => true,
+            "distanceField" => "distance",
           },
         },
-      }, "shop")
+      ], "shop")
 
       result_properties = [] of JSON::Any
+      values_arr = [] of Int32
 
-      get_shops.each { |properties|
-        DB_K
-          .select([:shop_id, :shop_name, :address, :phone, :score_shop, :cover_image, :type_s])
+      get_shops.map { |value| values_arr << "#{value["shop_id"]}".to_i }
+
+      shops = DB_K
+        .select([
+        :shop_id,
+        :shop_name,
+        :address,
+        :phone,
+        :score_shop,
+        :cover_image,
+        :type_s,
+      ])
+        .table(:shop)
+        .where_in(:shop_id, values_arr)
+        .execute_query
+
+      shops.not_nil!.map { |shop_data|
+        hash_match = get_shops.select! { |hash_r| "#{hash_r["shop_id"]}".to_i == shop_data["shop_id"] }
+        shop_data["distance"] = hash_match.first["distance"]
       }
+
+      shops.to_json
     end
   end
 
