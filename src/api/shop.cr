@@ -119,45 +119,61 @@ class Shop
       shop_result
     end
     get "#{url}/shops/:lat/:lon" do |env|
-      get_shops = MONGO.aggregate([
-        {
-          "$geoNear" => {
-            "near" => {
-              "type"        => "Point",
-              "coordinates" => ["#{env.params.url["lon"]}".to_f, "#{env.params.url["lat"]}".to_f],
+      limit = env.params.query["limit"].to_i
+      skip = env.params.query["skip"].to_i
+      maxDistance = env.params.query["maxDistance"].to_i
+      begin
+        get_shops = MONGO.aggregate([
+          {
+            "$geoNear" => {
+              "near" => {
+                "type"        => "Point",
+                "coordinates" => ["#{env.params.url["lon"]}".to_f, "#{env.params.url["lat"]}".to_f],
+              },
+              "maxDistance"   => maxDistance,
+              "spherical"     => true,
+              "distanceField" => "distance",
             },
-            "maxDistance"   => 100000,
-            "spherical"     => true,
-            "distanceField" => "distance",
           },
-        },
-      ], "shop")
+          {
+            "$limit" => limit,
+          },
+          {
+            "$skip" => skip,
+          },
+        ], "shop")
 
-      result_properties = [] of JSON::Any
-      values_arr = [] of Int32
+        result_properties = [] of JSON::Any
+        values_arr = [] of Int32
 
-      get_shops.map { |value| values_arr << "#{value["shop_id"]}".to_i }
+        get_shops.map { |value| values_arr << "#{value["shop_id"]}".to_i }
 
-      shops = DB_K
-        .select([
-        :shop_id,
-        :shop_name,
-        :address,
-        :phone,
-        :score_shop,
-        :cover_image,
-        :type_s,
-      ])
-        .table(:shop)
-        .where_in(:shop_id, values_arr)
-        .execute_query
+        shops = DB_K
+          .select([
+          :shop_id,
+          :shop_name,
+          :address,
+          :phone,
+          :score_shop,
+          :cover_image,
+          :type_s,
+        ])
+          .table(:shop)
+          .where_in(:shop_id, values_arr)
+          .execute_query
 
-      shops.not_nil!.map { |shop_data|
-        hash_match = get_shops.select! { |hash_r| "#{hash_r["shop_id"]}".to_i == shop_data["shop_id"] }
-        shop_data["distance"] = hash_match.first["distance"]
-      }
+        shops.not_nil!.map { |shop_data|
+          hash_match = get_shops.select! { |hash_r| "#{hash_r["shop_id"]}".to_i == shop_data["shop_id"] }
+          shop_data["distance"] = hash_match.first["distance"]
+        }
 
-      shops.to_json
+        shops.to_json
+      rescue exception
+        puts exception
+
+        env.response.status_code = 400
+        {message: "Error params request"}.to_json
+      end
     end
   end
 
