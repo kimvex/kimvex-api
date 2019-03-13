@@ -136,6 +136,11 @@ class Shop
             },
           },
           {
+            "$match" => {
+              "status" => true,
+            },
+          },
+          {
             "$limit" => limit,
           },
           {
@@ -145,6 +150,11 @@ class Shop
 
         result_properties = [] of JSON::Any
         values_arr = [] of Int32
+
+        if get_shops.empty?
+          env.response.status_code = 200
+          next get_shops.to_json
+        end
 
         get_shops.map { |value| values_arr << "#{value["shop_id"]}".to_i }
 
