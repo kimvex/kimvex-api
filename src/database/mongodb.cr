@@ -68,15 +68,14 @@ class MongoDB
       response = response.merge(Hash(String, JSON::Any).from_json(_to_value_hash.to_json))
     end
     puts response
-    # do |_to_hash__Array|
-    #   puts _to_hash__Array
-    #   # _to_hash_ = _to_hash__Array
-    #   # _to_hash_.each_value do |_to_value_hash|
-    #   # end
-    # end
-
     result.not_nil!.each do |values|
       puts values
     end
+  end
+
+  def update(collection = "", match = {} of String => Array(JSON::Any) | Bool | Float64 | Hash(String, JSON::Any) | Int64 | String | Array(Float64) | Hash(String, Array(Float64)), set = {} of String => (String | Int32 | Int8 | Int64))
+    result = @client["#{collection}"].update(match, set, LibMongoC::UpdateFlags::NONE, nil)
+
+    result
   end
 end

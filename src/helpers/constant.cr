@@ -13,4 +13,5 @@ ONLY_ROUTES = [
   "/api/images/shop/cover",
   "/api/images/shop",
   "/api/shop/:shop_id",
+  "/shop/:shop_id/update",
 ]
