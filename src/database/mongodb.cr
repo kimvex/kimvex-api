@@ -72,4 +72,10 @@ class MongoDB
       puts values
     end
   end
+
+  def update(collection = "", match = {} of String => Array(JSON::Any) | Bool | Float64 | Hash(String, JSON::Any) | Int64 | String | Array(Float64) | Hash(String, Array(Float64)), set = {} of String => (String | Int32 | Int8 | Int64))
+    result = @client["#{collection}"].update(match, set, LibMongoC::UpdateFlags::NONE, nil)
+
+    result
+  end
 end
