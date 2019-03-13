@@ -119,6 +119,115 @@ class Shop
 
       shop_result
     end
+
+    put "#{url}/shop/:shop_id/update" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      shop_id = env.params.url["shop_id"]
+      shop_name = env.params.json.has_key?("shop_name") ? env.params.json["shop_name"] : nil
+      address = env.params.json.has_key?("address") ? env.params.json["address"] : nil
+      phone = env.params.json.has_key?("phone") ? env.params.json["phone"] : nil
+      phone2 = env.params.json.has_key?("phone2") ? env.params.json["phone2"] : nil
+      description = env.params.json.has_key?("description") ? env.params.json["description"] : nil
+      cover_image = env.params.json.has_key?("cover_image") ? env.params.json["cover_image"] : nil
+      logo = env.params.json.has_key?("logo") ? env.params.json["logo"] : nil
+      accept_card = env.params.json.has_key?("accept_card") ? env.params.json["accept_card"] : nil
+      list_cards = env.params.json.has_key?("list_cards") ? env.params.json["list_cards"] : nil
+      type_s = env.params.json.has_key?("type_s") ? env.params.json["type_s"] : nil
+      service_type = env.params.json.has_key?("service_type") ? env.params.json["service_type"] : nil
+      lat = env.params.json.has_key?("lat") ? env.params.json["lat"] : nil
+      lon = env.params.json.has_key?("lon") ? env.params.json["lon"] : nil
+      list_images = env.params.json.has_key?("list_images") ? env.params.json["list_images"] : nil
+
+      field_shop_update = [] of String
+      data_shop_update = [] of String | Int32 | Float64
+      mongo_update = {} of String => Hash(String, Array(Float64)) | String
+
+      begin
+        if shop_name
+          field_shop_update << "name"
+          data_shop_update << shop_name.to_s
+          mongo_update["name"] = shop_name.to_s
+        end
+
+        if address
+          field_shop_update << "address"
+          data_shop_update << address.to_s
+        end
+
+        if phone
+          field_shop_update << "phone"
+          data_shop_update << "#{phone}".to_i
+        end
+
+        if phone2
+          field_shop_update << "phone2"
+          data_shop_update << "#{phone2}".to_i
+        end
+
+        if description
+          field_shop_update << "description"
+          data_shop_update << description.to_s
+        end
+
+        if cover_image
+          field_shop_update << "cover_image"
+          data_shop_update << cover_image.to_s
+        end
+
+        if accept_card
+          field_shop_update << "accept_card"
+          data_shop_update << accept_card.to_s
+        end
+
+        if list_cards
+          field_shop_update << "list_cards"
+          data_shop_update << list_cards.to_s
+        end
+
+        if type_s
+          field_shop_update << "type_s"
+          data_shop_update << type_s.to_s
+        end
+
+        if lat && lon
+          field_shop_update << "lat"
+          data_shop_update << "#{lat}".to_f
+          field_shop_update << "lon"
+          data_shop_update << "#{lon}".to_f
+          mongo_update["location"] = {
+            "coordinates" => ["#{lon}".to_f, "#{lat}".to_f],
+          }
+        end
+
+        if logo
+          field_shop_update << "logo"
+          data_shop_update << "#{logo}".to_s
+        end
+
+        if list_images
+          field_shop_update << "list_images"
+          data_shop_update << "#{list_images}".to_s
+        end
+
+        DB_K
+          .table(:shop)
+          .update(field_shop_update, data_shop_update)
+          .where(:user_id, user_id)
+          .and(:shop_id, shop_id)
+          .execute
+
+        MONGO.update("shop", {"shop_id" => shop_id}, {"$set" => mongo_update})
+
+        env.response.status_code = 200
+        {message: "Success update", status_code: 200}.to_json
+      rescue exception
+        puts exception
+
+        env.response.status_code = 400
+        {message: "Error params request"}.to_json
+      end
+    end
+
     get "#{url}/shops/:lat/:lon" do |env|
       limit = env.params.query["limit"].to_i
       skip = env.params.query["skip"].to_i
