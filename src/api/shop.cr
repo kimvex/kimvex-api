@@ -48,6 +48,7 @@ class Shop
               "coordinates" => ["#{env.params.json["lon"]}".to_f, "#{env.params.json["lat"]}".to_f],
             },
             "category" => type_s.to_s,
+            "status"   => false,
           })
 
           if env.params.json.has_key?("list_images")
