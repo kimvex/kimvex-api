@@ -111,3 +111,11 @@ puts MONGO.find({
 #     puts rs.read(String | Int32)
 #   end
 # end
+
+# Creating Hash
+# do |_to_hash__Array|
+#   puts _to_hash__Array
+#   # _to_hash_ = _to_hash__Array
+#   # _to_hash_.each_value do |_to_value_hash|
+#   # end
+# end
