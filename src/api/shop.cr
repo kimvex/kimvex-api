@@ -136,15 +136,14 @@ class Shop
       service_type = env.params.json.has_key?("service_type") ? env.params.json["service_type"] : nil
       lat = env.params.json.has_key?("lat") ? env.params.json["lat"] : nil
       lon = env.params.json.has_key?("lon") ? env.params.json["lon"] : nil
-      list_images = env.params.json.has_key?("list_images") ? env.params.json["list_images"] : nil
 
       field_shop_update = [] of String
       data_shop_update = [] of String | Int32 | Float64
-      mongo_update = {} of String => Hash(String, Array(Float64)) | String
+      mongo_update = {} of String => Hash(String, String | Array(Float64)) | String
 
       begin
         if shop_name
-          field_shop_update << "name"
+          field_shop_update << "shop_name"
           data_shop_update << shop_name.to_s
           mongo_update["name"] = shop_name.to_s
         end
@@ -195,6 +194,7 @@ class Shop
           field_shop_update << "lon"
           data_shop_update << "#{lon}".to_f
           mongo_update["location"] = {
+            "type"        => "Point",
             "coordinates" => ["#{lon}".to_f, "#{lat}".to_f],
           }
         end
@@ -202,11 +202,6 @@ class Shop
         if logo
           field_shop_update << "logo"
           data_shop_update << "#{logo}".to_s
-        end
-
-        if list_images
-          field_shop_update << "list_images"
-          data_shop_update << "#{list_images}".to_s
         end
 
         DB_K
