@@ -76,7 +76,7 @@ class Database
     if @query.includes?("JOIN")
       @query = "#{@query} AND #{@table}.#{field} = ?"
     else
-      @query = "#{@query} WHERE #{field} = ?"
+      @query = "#{@query} AND #{field} = ?"
     end
     @values_insert_update << value
     self
