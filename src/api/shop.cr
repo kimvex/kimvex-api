@@ -223,6 +223,30 @@ class Shop
       end
     end
 
+    post "#{url}/shops/:shop_id/update/images" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      shop_id = env.params.url["shop_id"]
+
+      begin
+        response_result = ""
+        HTTP::FormData.parse(env.request) do |upload|
+          result_cover = CLOUDINARY.upload(upload, "shop_images")
+          response_result = JSON.parse(result_cover)
+        end
+
+        DB_K
+          .table(:images_shop)
+          .insert([:url_image, :shop_id], [response_result["url"].to_s, shop_id.to_s])
+          .execute
+
+        {image: response_result["url"], message: "success"}.to_json
+      rescue exception
+        puts exception
+        env.response.status_code = 500
+        {message: "Error al agregar nueva imagen"}.to_json
+      end
+    end
+
     get "#{url}/shops/:lat/:lon" do |env|
       limit = env.params.query["limit"].to_i
       skip = env.params.query["skip"].to_i
