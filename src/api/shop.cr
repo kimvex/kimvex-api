@@ -288,6 +288,27 @@ class Shop
       end
     end
 
+    get "#{url}/shop/:shop_id/comments" do |env|
+      shop_id = env.params.url["shop_id"]
+
+      begin
+        comments = DB_K
+          .select([
+          :comment,
+        ])
+          .table(:shop_comments)
+          .join(:LEFT, :usersk, [:user_id, :fullname, :image], [:user_id, :user_id])
+          .where(:shop_id, shop_id.to_i)
+          .execute_query
+
+        comments.to_json
+      rescue exception
+        puts exception
+
+        {message: "Error al obtener los comentarios."}.to_json
+      end
+    end
+
     get "#{url}/shops/:lat/:lon" do |env|
       limit = env.params.query["limit"].to_i
       skip = env.params.query["skip"].to_i
