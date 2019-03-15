@@ -45,6 +45,12 @@ class Database
     self
   end
 
+  def delete(field = "")
+    @query = "DELETE"
+    @action_sql = "DELETE"
+    self
+  end
+
   def table(table = "")
     @table = "#{table}"
     @query = "#{@query} FROM #{table}"
@@ -238,6 +244,10 @@ class Database
         puts "#{@query}"
         @db.exec("#{@query}", @values_insert_update)
         puts "Update success"
+      when "DELETE"
+        puts "#{@query}"
+        @db.exec("#{@query}", @values_insert_update)
+        puts "Delete success"
       end
       self.clear
     rescue exception
