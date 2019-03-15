@@ -110,7 +110,7 @@ class Database
     self
   end
 
-  def group_by(fields = "")
+  def group_by(fields = "", group_field = "")
     if fields
       fields = fields.split(" ")[1].lstrip
     end
@@ -119,7 +119,7 @@ class Database
         field
       end
     }
-    @query = "#{@query} GROUP BY #{group_fields.join(",")}"
+    @query = "#{@query} GROUP BY #{group_field ? group_field : group_fields.join(",")}"
     self
   end
 
@@ -156,10 +156,9 @@ class Database
     self
   end
 
-  def avg(field, alias_as)
+  def avg(field, alias_as, group)
     index = 0
     query = @query
-
     restructure_query_select = query.split(",").map { |field_map|
       index = field_map.index(".#{field}")
       value_equal = ""
@@ -173,13 +172,13 @@ class Database
       elsif field_map.includes?("#{field}") && value_equal == ".#{field}"
         field_map.gsub("#{field}", "AVG(#{field}) AS #{alias_as}")
       else
-        field_map
+        field_map.gsub("#{field_map}", "AVG(#{field}) AS #{alias_as}")
       end
     }
 
-    @query = "SELECT #{restructure_query_select.join(",")} #{@query.split("#{restructure_query_select.last}")[1]}"
+    @query = "SELECT #{restructure_query_select.join(",")}#{@query.split("SELECT #{field}")[1]}"
 
-    group_by(query)
+    group_by(query, group)
 
     self
   end
