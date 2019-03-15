@@ -309,6 +309,41 @@ class Shop
       end
     end
 
+    post "#{url}/shop/:shop_id/score" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      shop_id = env.params.url["shop_id"]
+      score = env.params.json.has_key?("score") ? "#{env.params.json["score"]}".to_i : 1
+
+      begin
+        id_score = DB_K
+          .table(:shop_score_users)
+          .insert([:user_id, :shop_id, :score], [user_id, shop_id, score])
+          .execute
+
+        score_shop = DB_K
+          .select([
+          :score,
+        ])
+          .table(:shop_score_users)
+          .where(:shop_id, shop_id.to_i)
+          .avg(:score, :score_shop, :shop_id)
+          .execute_query
+        puts score_shop
+        DB_K
+          .table(:shop)
+          .update([:score_shop], ["#{score_shop.not_nil![0]["score_shop"]}".to_f.round(1)])
+          .where(:shop_id, shop_id)
+          .execute
+
+        {score: "#{score_shop.not_nil![0]["score_shop"]}".to_f.round(1)}.to_json
+      rescue exception
+        puts exception
+
+        env.response.status_code = 500
+        {message: "Error al calificar"}.to_json
+      end
+    end
+
     get "#{url}/shops/:lat/:lon" do |env|
       limit = env.params.query["limit"].to_i
       skip = env.params.query["skip"].to_i
