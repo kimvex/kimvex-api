@@ -247,6 +247,27 @@ class Shop
       end
     end
 
+    delete "#{url}/shops/:shop_id/image" do |env|
+      shop_id = env.params.url["shop_id"]
+      url_image = env.params.json.has_key?("url_image") ? env.params.json["url_image"] : nil
+
+      begin
+        DB_K
+          .delete
+          .table(:images_shop)
+          .where(:url_image, url_image.to_s)
+          .and(:shop_id, shop_id)
+          .execute
+
+        {message: "Imagen eliminada"}.to_json
+      rescue exception
+        puts exception
+
+        env.response.status_code = 500
+        {message: "Error al eliminar la imagen"}.to_json
+      end
+    end
+
     get "#{url}/shops/:lat/:lon" do |env|
       limit = env.params.query["limit"].to_i
       skip = env.params.query["skip"].to_i
