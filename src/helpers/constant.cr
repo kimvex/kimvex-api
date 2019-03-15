@@ -10,6 +10,8 @@ ONLY_ROUTES = [
   "/api/shop",
   "/shops/:shop_id/update/images",
   "/shops/:shop_id/image",
+  "/shop/:shop_id/comment",
+  "/shop/:shop_id/comments",
   "/api/images/avatar",
   "/api/images/shop/logo",
   "/api/images/shop/cover",
