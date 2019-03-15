@@ -268,6 +268,26 @@ class Shop
       end
     end
 
+    post "#{url}/shop/:shop_id/comment" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      shop_id = env.params.url["shop_id"]
+      comment = env.params.json.has_key?("comment") ? env.params.json["comment"].to_s : ""
+
+      begin
+        result = DB_K
+          .table(:shop_comments)
+          .insert([:user_id, :shop_id, :comment], [user_id, shop_id, comment])
+          .execute
+
+        {comment_id: result}.to_json
+      rescue exception
+        puts exception
+
+        env.response.status_code = 500
+        {message: "Error al insertar comentario"}.to_json
+      end
+    end
+
     get "#{url}/shops/:lat/:lon" do |env|
       limit = env.params.query["limit"].to_i
       skip = env.params.query["skip"].to_i
