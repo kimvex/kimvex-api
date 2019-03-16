@@ -344,6 +344,28 @@ class Shop
       end
     end
 
+    get "#{url}/shop/:shop_id/score" do |env|
+      shop_id = env.params.url["shop_id"]
+
+      begin
+        score_shop = DB_K
+          .select([
+          :score,
+        ])
+          .table(:shop_score_users)
+          .where(:shop_id, shop_id.to_i)
+          .avg(:score, :score_shop, :shop_id)
+          .execute_query
+
+        {score: "#{score_shop.not_nil!.first["score_shop"]}".to_f.round(1)}.to_json
+      rescue exception
+        puts exception
+
+        env.response.status_code = 500
+        {message: "Error al obtener calificacion"}.to_json
+      end
+    end
+
     get "#{url}/shops/:lat/:lon" do |env|
       limit = env.params.query["limit"].to_i
       skip = env.params.query["skip"].to_i
