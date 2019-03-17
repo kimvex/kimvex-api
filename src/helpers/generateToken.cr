@@ -3,7 +3,11 @@ require "crypto/bcrypt/password"
 
 class Token
   def self.generateToken(password)
-    payload = {password => password}
+    Time::Location.load("America/Mexico_City")
+    payload = {
+      :password => password,
+      :time     => Time.new,
+    }
     JWT.encode(payload, "serviciosK", "HS256")
   end
 
