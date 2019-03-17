@@ -12,6 +12,7 @@ ONLY_ROUTES = [
   "/shops/:shop_id/image",
   "/shop/:shop_id/comment",
   "/shop/:shop_id/comments",
+  "/find/shops/:lat/:lon",
   "/api/images/avatar",
   "/api/images/shop/logo",
   "/api/images/shop/cover",

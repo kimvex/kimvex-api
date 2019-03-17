@@ -404,6 +404,82 @@ class Shop
           next get_shops.to_json
         end
 
+        get_shops.map { |value|
+          values_arr << "#{value["shop_id"]}".to_i
+        }
+
+        shops = DB_K
+          .select([
+          :shop_id,
+          :shop_name,
+          :address,
+          :phone,
+          :score_shop,
+          :cover_image,
+          :type_s,
+        ])
+          .table(:shop)
+          .where_in(:shop_id, values_arr)
+          .execute_query
+
+        shops.not_nil!.map { |shop_data|
+          hash_match = get_shops.select! { |hash_r|
+            "#{hash_r["shop_id"]}".to_i == shop_data["shop_id"]
+          }
+          if !hash_match.empty?
+            shop_data["distance"] = hash_match.first["distance"]
+          end
+        }
+
+        shops.to_json
+      rescue exception
+        puts exception
+
+        env.response.status_code = 400
+        {message: "Error params request"}.to_json
+      end
+    end
+
+    get "#{url}/find/shops/:lat/:lon" do |env|
+      limit = env.params.query["limit"].to_i
+      skip = env.params.query["skip"].to_i
+      maxDistance = env.params.query["maxDistance"].to_i
+      category = env.params.query["category"].to_s
+      begin
+        get_shops = MONGO.aggregate([
+          {
+            "$geoNear" => {
+              "near" => {
+                "type"        => "Point",
+                "coordinates" => ["#{env.params.url["lon"]}".to_f, "#{env.params.url["lat"]}".to_f],
+              },
+              "maxDistance"   => maxDistance,
+              "spherical"     => true,
+              "distanceField" => "distance",
+            },
+          },
+          {
+            "$match" => {
+              "status"   => true,
+              "category" => category,
+            },
+          },
+          {
+            "$limit" => limit,
+          },
+          {
+            "$skip" => skip,
+          },
+        ], "shop")
+
+        result_properties = [] of JSON::Any
+        values_arr = [] of Int32
+
+        if get_shops.empty?
+          env.response.status_code = 200
+          next get_shops.to_json
+        end
+
         get_shops.map { |value| values_arr << "#{value["shop_id"]}".to_i }
 
         shops = DB_K
@@ -422,7 +498,10 @@ class Shop
 
         shops.not_nil!.map { |shop_data|
           hash_match = get_shops.select! { |hash_r| "#{hash_r["shop_id"]}".to_i == shop_data["shop_id"] }
-          shop_data["distance"] = hash_match.first["distance"]
+
+          if !hash_match.empty?
+            shop_data["distance"] = hash_match.first["distance"]
+          end
         }
 
         shops.to_json
