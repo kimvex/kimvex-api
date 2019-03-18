@@ -119,7 +119,8 @@ class Database
         field
       end
     }
-    @query = "#{@query} GROUP BY #{group_field ? group_field : group_fields.join(",")}"
+
+    @query = "#{@query} GROUP BY #{group_field.not_nil! ? group_fields.join(",") : group_field}"
     self
   end
 
