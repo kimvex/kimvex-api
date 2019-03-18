@@ -117,7 +117,7 @@ class Shop
         .group_concat([:url_image, :images_shop, :url], :image_id, :images)
         .first
 
-      shop_result
+      shop_result.to_json
     end
 
     put "#{url}/shop/:shop_id/update" do |env|
