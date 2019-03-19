@@ -65,10 +65,11 @@ class Users
 
           env.response.status_code = 500
 
-          {message: "#{exception}", status: 500}.to_json
+          {message: "Error al registrarse.", status: 500}.to_json
         end
       else
         env.response.status_code = 400
+        {message: "Faltan parametros.", status: 500}.to_json
       end
     end
 
