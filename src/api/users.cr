@@ -103,6 +103,9 @@ class Users
       fullname = env.params.json.has_key?("fullname") ? env.params.json["fullname"] : nil
       phone = env.params.json.has_key?("phone") ? (env.params.json["phone"].to_s).to_i64 : nil
       url_image = env.params.json.has_key?("image_url") ? env.params.json["image_url"] : nil
+      age = env.params.json.hash_key("age") ? env.params.json["age"].to_i64 : nil
+      gender = env.params.json.hash_key("gender") ? env.params.json["gender"] : nil
+      address = env.params.json.hash_key("address") ? env.params.json["address"] : nil
 
       arr_field_user = [] of String
       arr_data_user = [] of String | Int64
@@ -130,6 +133,19 @@ class Users
           arr_field_user << "image"
           arr_data_user << url_image.to_s
         end
+        if age
+          arr_field_user << "age"
+          arr_data_user << age
+        end
+        if address
+          arr_field_user << "address"
+          arr_data_user << address.to_s
+        end
+        if gender
+          arr_field_user << "gender"
+          arr_data_user << gender.to_s
+        end
+
         if password
           if Token.verifyPassword(user["password"]) == password
             new_password_token = Token.generatePasswordHash(new_password)
