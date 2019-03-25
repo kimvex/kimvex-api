@@ -16,6 +16,9 @@ $ cd cmake-build
 $ make
 $ sudo make install
 
+Este funciona
+sudo apt install libmongoc-dev libmongoc-1.0-0 libmongoclient-dev
+
 ## Usage
 
 Para prueba se ejecuta
