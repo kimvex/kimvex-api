@@ -119,3 +119,26 @@ puts MONGO.find({
 #   # _to_hash_.each_value do |_to_value_hash|
 #   # end
 # end
+
+# Instalacion de mongdb driver
+# /usr/local/lib
+
+#  gdb ./init
+
+#  mkdir cmake-buildls
+# cd cmake-buildls
+# cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF ..
+# cat CMakeFiles/CMakeOutput.log
+# sudo /usr/local/share/mongo-c-driver/uninstall.sh
+
+#  cd mongo-c-driver-1.14.0
+#  cd cmake-buildls
+#  make
+#  sudo make install
+#  crystal run src/init.cr --error-trace
+
+# apt-get install libmongoc-1.0-0
+# sudo /usr/local/share/mongo-c-driver/uninstall.sh
+
+# Este es el que funciona
+# sudo apt install libmongoc-dev libmongoc-1.0-0 libmongoclient-dev
