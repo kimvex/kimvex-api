@@ -256,7 +256,7 @@ class Database
       self.clear
 
       if error.includes?("Duplicate entry")
-        raise Exception.new("The mail is already registered")
+        raise Exception.new("The email is already registered")
       end
       puts error
     end
