@@ -37,7 +37,7 @@ class Users
         password = env.params.json["password"]
         email = env.params.json["email"]
         fullname = env.params.json["fullname"]
-        age = env.params.json.has_key?("age") ? (env.params.json["age"].to_s).to_i : nil
+        age = env.params.json.has_key?("age") ? env.params.json["age"].to_s : nil
         phone = env.params.json.has_key?("phone") ? (env.params.json["phone"].to_s).to_i64 : nil
         gender = env.params.json.has_key?("gender") ? env.params.json["gender"].to_s : nil
 
@@ -103,7 +103,7 @@ class Users
       fullname = env.params.json.has_key?("fullname") ? env.params.json["fullname"] : nil
       phone = env.params.json.has_key?("phone") ? (env.params.json["phone"].to_s).to_i64 : nil
       url_image = env.params.json.has_key?("image_url") ? env.params.json["image_url"] : nil
-      age = env.params.json.has_key?("age") ? (env.params.json["age"].to_s).to_i64 : nil
+      age = env.params.json.has_key?("age") ? env.params.json["age"].to_s : nil
       gender = env.params.json.has_key?("gender") ? env.params.json["gender"] : nil
       address = env.params.json.has_key?("address") ? env.params.json["address"] : nil
 
