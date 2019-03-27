@@ -587,6 +587,62 @@ class Shop
         {message: "Error al obtener las ofertas", status: 500}.to_json
       end
     end
+
+    put "#{url}/shop/offers/:offer_id" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      offer_id = env.params.url.has_key?("offer_id") ? env.params.url["offer_id"] : nil
+      shop_id = env.params.json.has_key?("shop_id") ? (env.params.json["shop_id"].to_s).to_i : nil
+      title = env.params.json.has_key?("title") ? env.params.json["title"].to_s : nil
+      description = env.params.json.has_key?("description") ? env.params.json["description"].to_s : nil
+      date_end = env.params.json.has_key?("date_end") ? env.params.json["date_end"].to_s : nil
+      image_url = env.params.json.has_key?("image_url") ? env.params.json["image_url"].to_s : nil
+      active = env.params.json.has_key?("active") ? (env.params.json["active"].to_s).to_i : nil
+
+      begin
+        arr_fields = [] of String
+        arr_values = [] of String | Int32 | Float64
+
+        if title
+          arr_fields << "title"
+          arr_values << title
+        end
+
+        if description
+          arr_fields << "description"
+          arr_values << description
+        end
+
+        if date_end
+          arr_fields << "date_end"
+          arr_values << date_end
+        end
+
+        if image_url
+          arr_fields << "image_url"
+          arr_values << image_url
+        end
+
+        if active
+          arr_fields << "active"
+          arr_values << active
+        end
+
+        DB_K
+          .table(:offers)
+          .update(arr_fields, arr_values)
+          .where(:offers_id, offer_id)
+          .and(:user_id, user_id)
+          .and(:shop_id, shop_id)
+          .execute
+
+        env.response.status_code = 200
+        {message: "Success update", status_code: 200}.to_json
+      rescue exception
+        puts "#{exception} Error al actualizar oferta"
+
+        {message: "Error al actualizar oferta", status: 500}.to_json
+      end
+    end
   end
 
   def self.validateField(field, env)
