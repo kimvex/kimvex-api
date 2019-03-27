@@ -556,6 +556,9 @@ class Shop
     end
 
     get "#{url}/shop/offers" do |env|
+      limit = env.params.query.has_key?("limit") ? env.params.query["limit"].to_i : 10
+      since = env.params.query.has_key?("since") ? env.params.query["since"].to_i : "0".to_i
+
       begin
         time = Time.now Time::Location.load("America/Mexico_City")
         time_paser = "#{time}".split(" ").first
@@ -572,6 +575,8 @@ class Shop
           .join(:LEFT, :shop, [:shop_id, :shop_name, :cover_image], [:shop_id, :shop_id])
           .where(:date_end, time_paser, ">=")
           .and(:active, 1)
+          .and(:offers_id, since, ">")
+          .limit(limit)
           .execute_query
 
         env.response.status_code = 200
