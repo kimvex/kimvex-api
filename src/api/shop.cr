@@ -555,7 +555,7 @@ class Shop
       end
     end
 
-    get "#{url}/shop/offers" do |env|
+    get "#{url}/shops/offers" do |env|
       limit = env.params.query.has_key?("limit") ? env.params.query["limit"].to_i : 10
       since = env.params.query.has_key?("since") ? env.params.query["since"].to_i : "0".to_i
 
