@@ -57,11 +57,11 @@ class Database
     self
   end
 
-  def where(field = "", value = "")
+  def where(field = "", value = "", operator = "=")
     if @query.includes?("JOIN")
-      @query = "#{@query} WHERE #{@table}.#{field} = ?"
+      @query = "#{@query} WHERE #{@table}.#{field} #{operator} ?"
     else
-      @query = "#{@query} WHERE #{field} = ?"
+      @query = "#{@query} WHERE #{field} #{operator} ?"
     end
     @values_insert_update << value
     self
