@@ -512,6 +512,48 @@ class Shop
         {message: "Error params request"}.to_json
       end
     end
+
+    post "#{url}/shop/offers" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      shop_id = env.params.json.has_key?("shop_id") ? (env.params.json["shop_id"].to_s).to_i : nil
+      title = env.params.json.has_key?("title") ? env.params.json("title").to_s : nil
+      description = env.params.json.has_key?("description") ? env.params.json("description").to_s : nil
+      date_init = env.params.json.has_key?("date_init") ? env.params.json("date_init").to_s : nil
+      date_end = env.params.json.has_key?("date_end") ? env.params.json("date_end").to_s : nil
+      image_url = env.params.json.has_key?("image_url") ? env.params.json("image_url").to_s : nil
+
+      begin
+        DB_k
+          .table(:offers)
+          .insert([
+          :user_id,
+          :shop_id,
+          :title,
+          :description,
+          :date_init,
+          :date_end,
+          :image_url,
+        ],
+          [
+            user_id,
+            shop_id,
+            title,
+            description,
+            date_init,
+            date_end,
+            image_url,
+          ])
+          .execute
+
+        env.response.status_code = 200
+        {message: "Created offers", status: 200}.to_json
+      rescue exception
+        console.log(exception, "exception to create offer")
+
+        env.response.status_code = 500
+        {message: "Error when creating the offer"}.to_json
+      end
+    end
   end
 
   def self.validateField(field, env)
