@@ -1,6 +1,7 @@
 ROUTES_EXCLUDE = [
   "/api/users/login",
   "/api/users/register",
+  "/shops/offers",
 ]
 
 ONLY_ROUTES = [
@@ -13,6 +14,8 @@ ONLY_ROUTES = [
   "/shop/:shop_id/comment",
   "/shop/:shop_id/comments",
   "/find/shops/:lat/:lon",
+  "/shop/offers",
+  "/shop/offers/:offer_id",
   "/api/images/avatar",
   "/api/images/shop/logo",
   "/api/images/shop/cover",
