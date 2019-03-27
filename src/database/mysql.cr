@@ -78,18 +78,18 @@ class Database
     self
   end
 
-  def and(field = "", value = "")
+  def and(field = "", value = "", operator = "=")
     if @query.includes?("JOIN")
-      @query = "#{@query} AND #{@table}.#{field} = ?"
+      @query = "#{@query} AND #{@table}.#{field} #{operator} ?"
     else
-      @query = "#{@query} AND #{field} = ?"
+      @query = "#{@query} AND #{field} #{operator} ?"
     end
     @values_insert_update << value
     self
   end
 
-  def or(field = "", value = "")
-    @query = "#{@query} OR #{field} = ?"
+  def or(field = "", value = "", operator = "=")
+    @query = "#{@query} OR #{field} #{operator} ?"
     @values_insert_update << value
     self
   end
