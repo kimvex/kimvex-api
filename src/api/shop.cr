@@ -554,6 +554,34 @@ class Shop
         {message: "Error when creating the offer"}.to_json
       end
     end
+
+    get "#{url}/shop/offers" do |env|
+      begin
+        time = Time.now Time::Location.load("America/Mexico_City")
+        time_paser = "#{time}".split(" ").first
+
+        offers = DB_K
+          .select([
+          :title,
+          :description,
+          :date_init,
+          :date_end,
+          :image_url,
+        ])
+          .table(:offers)
+          .join(:LEFT, :shop, [:shop_id, :shop_name, :cover_image], [:shop_id, :shop_id])
+          .where(:date_end, time_paser, ">=")
+          .and(:active, 1)
+          .execute_query
+
+        env.response.status_code = 200
+        {offers: offers, status: 200}.to_json
+      rescue exception
+        puts "#{exception} Error al obtener las oefertas"
+
+        {message: "Error al obtener las ofertas", status: 500}.to_json
+      end
+    end
   end
 
   def self.validateField(field, env)
