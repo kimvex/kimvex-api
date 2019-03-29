@@ -690,6 +690,20 @@ class Shop
       lon = validateField("lon", env)
 
       begin
+        is_owner = DB_K
+          .select([
+          :shop_id,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .and(:status, 1)
+          .execute_query
+
+        if is_owner.not_nil!.size < 1
+          raise Exception.new("Not is owner or active shop")
+        end
+
         arr_fields = [] of String
         arr_values = [] of String | Int32 | Float64
         mongo_update = {} of String => Hash(String, String | Array(Float64)) | String
