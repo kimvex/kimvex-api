@@ -671,7 +671,7 @@ class Shop
           last_distance: order_offers.last.not_nil!["distance"],
         }.to_json
       rescue exception
-        puts "#{exception} Error al obtener las oefertas"
+        puts "#{exception} Error al obtener las ofertas"
 
         {message: "Error al obtener las ofertas", status: 500}.to_json
       end
