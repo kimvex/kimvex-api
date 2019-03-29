@@ -598,13 +598,49 @@ class Shop
       end
     end
 
-    get "#{url}/shops/offers" do |env|
+    get "#{url}/shops/offers/:lat/:lon" do |env|
       limit = env.params.query.has_key?("limit") ? env.params.query["limit"].to_i : 10
-      since = env.params.query.has_key?("since") ? env.params.query["since"].to_i : "0".to_i
+      last_offer = env.params.query.has_key?("last_offer_id") ? env.params.query["last_offer_id"] : 0
+      minDistance = env.params.query.has_key?("minDistance") ? env.params.query["minDistance"].to_f : 0.0
 
       begin
         time = Time.now Time::Location.load("America/Mexico_City")
         time_paser = "#{time}".split(" ").first
+
+        get_offers = MONGO.aggregate([
+          {
+            "$geoNear" => {
+              "near" => {
+                "type"        => "Point",
+                "coordinates" => ["#{env.params.url["lon"]}".to_f, "#{env.params.url["lat"]}".to_f],
+              },
+              "minDistance"   => minDistance,
+              "spherical"     => true,
+              "distanceField" => "distance",
+            },
+          },
+          {
+            "$match" => {
+              "active"   => true,
+              "offer_id" => {"$nin" => [last_offer]},
+              "date_end" => {"$gt" => time_paser},
+            },
+          },
+          {
+            "$limit" => limit,
+          },
+        ], "offers")
+
+        values_arr = [] of Int32
+
+        if get_offers.empty?
+          env.response.status_code = 200
+          next get_offers.to_json
+        end
+
+        get_offers.map { |value|
+          values_arr << "#{value["shop_id"]}".to_i
+        }
 
         offers = DB_K
           .select([
@@ -616,14 +652,24 @@ class Shop
         ])
           .table(:offers)
           .join(:LEFT, :shop, [:shop_id, :shop_name, :cover_image], [:shop_id, :shop_id])
-          .where(:date_end, time_paser, ">=")
-          .and(:active, 1)
-          .and(:offers_id, since, ">")
-          .limit(limit)
+          .where_in(:shop_id, values_arr)
           .execute_query
 
+        order_offers = get_offers.not_nil!.map { |offers_data|
+          hash_match = offers.not_nil!.find { |hash_r|
+            "#{offers_data["shop_id"]}".to_i == hash_r["shop_id"]
+          }
+
+          hash_match.not_nil!["distance"] = offers_data["distance"]
+          hash_match
+        }
+
         env.response.status_code = 200
-        {offers: offers, status: 200}.to_json
+        {
+          offers:        order_offers,
+          last_offer_id: order_offers.last.not_nil!["shop_id"],
+          last_distance: order_offers.last.not_nil!["distance"],
+        }.to_json
       rescue exception
         puts "#{exception} Error al obtener las oefertas"
 
