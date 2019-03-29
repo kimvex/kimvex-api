@@ -719,6 +719,8 @@ class Shop
         if active
           arr_fields << "active"
           arr_values << active
+
+          mongo_update["active"] = active < 1 ? false : true
         end
 
         if lat && lon
