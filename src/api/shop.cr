@@ -531,6 +531,8 @@ class Shop
       date_init = env.params.json.has_key?("date_init") ? env.params.json["date_init"].to_s : nil
       date_end = env.params.json.has_key?("date_end") ? env.params.json["date_end"].to_s : nil
       image_url = env.params.json.has_key?("image_url") ? env.params.json["image_url"].to_s : nil
+      lat = validateField("lat", env)
+      lon = validateField("lon", env)
 
       begin
         is_owner = DB_K
@@ -547,7 +549,7 @@ class Shop
           raise Exception.new("Not is owner or active shop")
         end
 
-        DB_K
+        offer_id_insert = DB_K
           .table(:offers)
           .insert([
           :user_id,
@@ -557,6 +559,8 @@ class Shop
           :date_init,
           :date_end,
           :image_url,
+          :lat,
+          :lon,
         ],
           [
             user_id,
@@ -566,8 +570,23 @@ class Shop
             date_init,
             date_end,
             image_url,
+            lat,
+            lon,
           ])
           .execute
+
+        MONGO.insert("offers", {
+          "offer_id" => offer_id_insert.to_s,
+          "shop_id"  => shop_id.to_s,
+          "title"    => title,
+          "location" => {
+            "type"        => "Point",
+            "coordinates" => ["#{env.params.json["lon"]}".to_f, "#{env.params.json["lat"]}".to_f],
+          },
+          "date_init" => date_init,
+          "date_end"  => date_end,
+          "active"    => true,
+        })
 
         env.response.status_code = 200
         {message: "Created offers", status: 200}.to_json
