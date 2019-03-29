@@ -706,7 +706,7 @@ class Shop
 
         arr_fields = [] of String
         arr_values = [] of String | Int32 | Float64
-        mongo_update = {} of String => Hash(String, String | Array(Float64)) | String
+        mongo_update = {} of String => Hash(String, String | Array(Float64)) | String | Bool
 
         if title
           arr_fields << "title"
