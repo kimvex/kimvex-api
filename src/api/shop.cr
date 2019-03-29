@@ -444,10 +444,11 @@ class Shop
     end
 
     get "#{url}/find/shops/:lat/:lon" do |env|
-      limit = env.params.query["limit"].to_i
-      skip = env.params.query["skip"].to_i
-      maxDistance = env.params.query["maxDistance"].to_i
+      limit = env.params.query.has_key?("limit") ? env.params.query["limit"].to_i : 10
+      last_shop = env.params.query.has_key?("last_shop_id") ? env.params.query["last_shop_id"] : 0
+      minDistance = env.params.query.has_key?("minDistance") ? env.params.query["minDistance"].to_f : 0.0
       category = env.params.query["category"].to_s
+
       begin
         get_shops = MONGO.aggregate([
           {
@@ -456,7 +457,7 @@ class Shop
                 "type"        => "Point",
                 "coordinates" => ["#{env.params.url["lon"]}".to_f, "#{env.params.url["lat"]}".to_f],
               },
-              "maxDistance"   => maxDistance,
+              "minDistance"   => minDistance,
               "spherical"     => true,
               "distanceField" => "distance",
             },
@@ -465,13 +466,11 @@ class Shop
             "$match" => {
               "status"   => true,
               "category" => category,
+              "shop_id"  => {"$nin" => [last_shop]},
             },
           },
           {
             "$limit" => limit,
-          },
-          {
-            "$skip" => skip,
           },
         ], "shop")
 
@@ -499,15 +498,23 @@ class Shop
           .where_in(:shop_id, values_arr)
           .execute_query
 
-        shops.not_nil!.map { |shop_data|
-          hash_match = get_shops.select! { |hash_r| "#{hash_r["shop_id"]}".to_i == shop_data["shop_id"] }
+        order_shops = get_shops.not_nil!.map { |shop_data|
+          hash_match = shops.not_nil!.find { |hash_r|
+            "#{shop_data["shop_id"]}".to_i == hash_r["shop_id"]
+          }
 
-          if !hash_match.empty?
-            shop_data["distance"] = hash_match.first["distance"]
-          end
+          puts shop_data
+          puts hash_match
+
+          hash_match.not_nil!["distance"] = shop_data["distance"]
+          hash_match
         }
 
-        shops.to_json
+        {
+          shop:          order_shops,
+          last_shop_id:  order_shops.last.not_nil!["shop_id"],
+          last_distance: order_shops.last.not_nil!["distance"],
+        }.to_json
       rescue exception
         puts exception
 
