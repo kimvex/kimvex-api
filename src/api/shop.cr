@@ -430,12 +430,11 @@ class Shop
           hash_match
         }
 
-        order_by =
-          {
-            shops:         order_shops,
-            last_shop_id:  order_shops.last.not_nil!["shop_id"],
-            last_distance: order_shops.last.not_nil!["distance"],
-          }.to_json
+        {
+          shops:         order_shops,
+          last_shop_id:  order_shops.last.not_nil!["shop_id"],
+          last_distance: order_shops.last.not_nil!["distance"],
+        }.to_json
       rescue exception
         puts exception
 
