@@ -686,10 +686,13 @@ class Shop
       date_end = env.params.json.has_key?("date_end") ? env.params.json["date_end"].to_s : nil
       image_url = env.params.json.has_key?("image_url") ? env.params.json["image_url"].to_s : nil
       active = env.params.json.has_key?("active") ? (env.params.json["active"].to_s).to_i : nil
+      lat = validateField("lat", env)
+      lon = validateField("lon", env)
 
       begin
         arr_fields = [] of String
         arr_values = [] of String | Int32 | Float64
+        mongo_update = {} of String => Hash(String, String | Array(Float64)) | String
 
         if title
           arr_fields << "title"
@@ -704,6 +707,8 @@ class Shop
         if date_end
           arr_fields << "date_end"
           arr_values << date_end
+
+          mongo_update["date_end"] = date_end
         end
 
         if image_url
@@ -716,6 +721,18 @@ class Shop
           arr_values << active
         end
 
+        if lat && lon
+          arr_fields << "lat"
+          arr_values << "#{lat}".to_f
+          arr_fields << "lon"
+          arr_values << "#{lon}".to_f
+
+          mongo_update["location"] = {
+            "type"        => "Point",
+            "coordinates" => ["#{lon}".to_f, "#{lat}".to_f],
+          }
+        end
+
         DB_K
           .table(:offers)
           .update(arr_fields, arr_values)
@@ -723,6 +740,8 @@ class Shop
           .and(:user_id, user_id)
           .and(:shop_id, shop_id)
           .execute
+
+        MONGO.update("shop", {"shop_id" => shop_id}, {"$set" => mongo_update})
 
         env.response.status_code = 200
         {message: "Success update", status_code: 200}.to_json
