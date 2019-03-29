@@ -711,6 +711,8 @@ class Shop
         if title
           arr_fields << "title"
           arr_values << title
+
+          mongo_update["title"] = title
         end
 
         if description
@@ -757,7 +759,7 @@ class Shop
           .and(:shop_id, shop_id)
           .execute
 
-        MONGO.update("shop", {"shop_id" => shop_id}, {"$set" => mongo_update})
+        MONGO.update("offers", {"offer_id" => offer_id.to_s}, {"$set" => mongo_update})
 
         env.response.status_code = 200
         {message: "Success update", status_code: 200}.to_json
