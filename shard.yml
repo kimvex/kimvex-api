@@ -21,8 +21,7 @@ dependencies:
   mysql:
     github: crystal-lang/crystal-mysql
   mongo:
-    github: datanoise/mongo.cr
-    branch: master
+    github: kimvex/mongodb-crystal
   bson:
     github: jeromegn/bson.cr
 
