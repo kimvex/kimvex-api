@@ -1,5 +1,9 @@
 version: 1.0
 shards:
+  bson:
+    github: jeromegn/bson.cr
+    version: 0.1.5
+
   db:
     github: crystal-lang/crystal-db
     version: 0.5.1
@@ -7,10 +11,6 @@ shards:
   exception_page:
     github: crystal-loot/exception_page
     version: 0.1.2
-
-  granite:
-    github: amberframework/granite
-    version: 0.15.2
 
   jwt:
     github: crystal-community/jwt
@@ -29,8 +29,8 @@ shards:
     version: 0.4.0
 
   mongo:
-    github: datanoise/mongo.cr
-    commit: 86c9e530c0ac980ed7b15e653746bc5b6f2527fc
+    github: kimvex/mongodb-crystal
+    commit: d00dbfabf8dca30d0a01c9e2d068105c326294c4
 
   mysql:
     github: crystal-lang/crystal-mysql

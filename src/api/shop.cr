@@ -523,6 +523,57 @@ class Shop
       end
     end
 
+    put "#{url}/shop/lock/:shop_id" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      shop_id = env.params.url["shop_id"]
+
+      mongo_update_shop = {} of String => Bool
+      mongo_update_offers = {} of String => Bool
+
+      begin
+        is_owner = DB_K
+          .select([
+          :shop_id,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .and(:status, 1)
+          .execute_query
+
+        if is_owner.not_nil!.size < 1
+          raise Exception.new("Not is owner or active shop")
+        end
+
+        mongo_update_shop["status"] = false
+        mongo_update_offers["active"] = false
+
+        DB_K
+          .table(:shop)
+          .update(["status"], [0])
+          .where(:user_id, user_id)
+          .and(:shop_id, shop_id)
+          .execute
+
+        DB_K
+          .table(:offers)
+          .update(["active"], [0])
+          .where(:shop_id, shop_id)
+          .and(:user_id, user_id)
+          .execute
+
+        MONGO.update("shop", {"shop_id" => shop_id}, {"$set" => mongo_update_shop})
+        MONGO.update_many("offers", {"shop_id" => shop_id.to_s}, {"$set" => mongo_update_offers})
+
+        {message: "Tienda desabilitada"}.to_json
+      rescue exception
+        puts "#{exception} Error al desabilitar una tienda"
+
+        env.response.status_code = 500
+        {message: "Error al desactivar tienda"}.to_json
+      end
+    end
+
     post "#{url}/shop/offers" do |env|
       user_id = Authentication.current_session(env.request.headers["token"])
       shop_id = env.params.json.has_key?("shop_id") ? (env.params.json["shop_id"].to_s).to_i : nil
