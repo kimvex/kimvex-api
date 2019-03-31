@@ -78,4 +78,12 @@ class MongoDB
 
     result
   end
+
+  def update_many(collection = "", match = {} of String => Array(JSON::Any) | Bool | Float64 | Hash(String, JSON::Any) | Int64 | String | Array(Float64) | Hash(String, Array(Float64)), set = {} of String => (String | Int32 | Int8 | Int64))
+    result = @client["#{collection}"]
+      .create_bulk_operation
+      .update(match, set).execute
+
+    result
+  end
 end
