@@ -81,8 +81,9 @@ class Shop
           env.response.status_code = 400
           {message: error}.to_json
         else
-          puts error
+          LOGGER.warn("#{error}")
           env.response.status_code = 500
+          {message: "Error al agregar tienda"}.to_json
         end
       end
     end
@@ -91,33 +92,40 @@ class Shop
       shop_id = env.params.url["shop_id"]
       user_id = Authentication.current_session(env.request.headers["token"])
 
-      shop_result = DB_K
-        .select([
-        :shop_id,
-        :shop_name,
-        :address,
-        :phone,
-        :phone2,
-        :description,
-        :cover_image,
-        :accept_card,
-        :list_cards,
-        :type_s,
-        :lat,
-        :lon,
-        :score_shop,
-        :status,
-      ])
-        .table(:shop)
-        .join(:LEFT, :images_shop, [:url_image], [:shop_id, :shop_id])
-        .join(:LEFT, :shop_schedules, [:LUN, :MAR, :MIE, :JUE, :VIE, :SAB, :DOM], [:shop_id, :shop_id])
-        .join(:LEFT, :usersk, [:user_id], [:user_id, :user_id])
-        .where(:shop_id, shop_id)
-        .and(:user_id, user_id)
-        .group_concat([:url_image, :images_shop, :url], :image_id, :images)
-        .first
+      begin
+        shop_result = DB_K
+          .select([
+          :shop_id,
+          :shop_name,
+          :address,
+          :phone,
+          :phone2,
+          :description,
+          :cover_image,
+          :accept_card,
+          :list_cards,
+          :type_s,
+          :lat,
+          :lon,
+          :score_shop,
+          :status,
+        ])
+          .table(:shop)
+          .join(:LEFT, :images_shop, [:url_image], [:shop_id, :shop_id])
+          .join(:LEFT, :shop_schedules, [:LUN, :MAR, :MIE, :JUE, :VIE, :SAB, :DOM], [:shop_id, :shop_id])
+          .join(:LEFT, :usersk, [:user_id], [:user_id, :user_id])
+          .where(:shop_id, shop_id)
+          .and(:user_id, user_id)
+          .group_concat([:url_image, :images_shop, :url], :image_id, :images)
+          .first
 
-      shop_result.to_json
+        shop_result.to_json
+      rescue exception
+        LOGGER.warn("#{exception}")
+
+        env.response.status_code = 500
+        {message: "Error al obtener tienda"}.to_json
+      end
     end
 
     put "#{url}/shop/:shop_id/update" do |env|
@@ -216,7 +224,7 @@ class Shop
         env.response.status_code = 200
         {message: "Success update", status_code: 200}.to_json
       rescue exception
-        puts exception
+        LOGGER.warn("#{exception}")
 
         env.response.status_code = 400
         {message: "Error params request"}.to_json
@@ -241,7 +249,7 @@ class Shop
 
         {image: response_result["url"], message: "success"}.to_json
       rescue exception
-        puts exception
+        LOGGER.warn("#{exception}")
         env.response.status_code = 500
         {message: "Error al agregar nueva imagen"}.to_json
       end
@@ -261,7 +269,7 @@ class Shop
 
         {message: "Imagen eliminada"}.to_json
       rescue exception
-        puts exception
+        LOGGER.warn("#{exception}")
 
         env.response.status_code = 500
         {message: "Error al eliminar la imagen"}.to_json
@@ -281,7 +289,7 @@ class Shop
 
         {comment_id: result}.to_json
       rescue exception
-        puts exception
+        LOGGER.warn("#{exception}")
 
         env.response.status_code = 500
         {message: "Error al insertar comentario"}.to_json
@@ -303,7 +311,7 @@ class Shop
 
         comments.to_json
       rescue exception
-        puts exception
+        LOGGER.warn("#{exception}")
 
         {message: "Error al obtener los comentarios."}.to_json
       end
@@ -337,7 +345,7 @@ class Shop
 
         {score: "#{score_shop.not_nil![0]["score_shop"]}".to_f.round(1)}.to_json
       rescue exception
-        puts exception
+        LOGGER.warn("#{exception}")
 
         env.response.status_code = 500
         {message: "Error al calificar"}.to_json
@@ -359,7 +367,7 @@ class Shop
 
         {score: "#{score_shop.not_nil!.first["score_shop"]}".to_f.round(1)}.to_json
       rescue exception
-        puts exception
+        LOGGER.warn("#{exception}")
 
         env.response.status_code = 500
         {message: "Error al obtener calificacion"}.to_json
@@ -436,7 +444,7 @@ class Shop
           last_distance: order_shops.last.not_nil!["distance"],
         }.to_json
       rescue exception
-        puts exception
+        LOGGER.warn("#{exception}")
 
         env.response.status_code = 400
         {message: "Error params request"}.to_json
@@ -516,7 +524,7 @@ class Shop
           last_distance: order_shops.last.not_nil!["distance"],
         }.to_json
       rescue exception
-        puts exception
+        LOGGER.warn("#{exception}")
 
         env.response.status_code = 400
         {message: "Error params request"}.to_json
@@ -567,7 +575,7 @@ class Shop
 
         {message: "Tienda desabilitada"}.to_json
       rescue exception
-        puts "#{exception} Error al desabilitar una tienda"
+        LOGGER.warn("#{exception} Error al desabilitar una tienda")
 
         env.response.status_code = 500
         {message: "Error al desactivar tienda"}.to_json
@@ -642,7 +650,7 @@ class Shop
         env.response.status_code = 200
         {message: "Created offers", status: 200}.to_json
       rescue exception
-        puts "#{exception} exception to create offer"
+        LOGGER.warn("#{exception} exception to create offer")
 
         env.response.status_code = 500
         {message: "Error when creating the offer"}.to_json
@@ -722,7 +730,7 @@ class Shop
           last_distance: order_offers.last.not_nil!["distance"],
         }.to_json
       rescue exception
-        puts "#{exception} Error al obtener las ofertas"
+        LOGGER.warn("#{exception} Error al obtener las ofertas")
 
         {message: "Error al obtener las ofertas", status: 500}.to_json
       end
@@ -815,7 +823,7 @@ class Shop
         env.response.status_code = 200
         {message: "Success update", status_code: 200}.to_json
       rescue exception
-        puts "#{exception} Error al actualizar oferta"
+        LOGGER.warn("#{exception} Error al actualizar oferta")
 
         {message: "Error al actualizar oferta", status: 500}.to_json
       end
@@ -870,7 +878,7 @@ class Shop
           last_id: last_id_result,
         }.to_json
       rescue exception
-        puts "#{exception} Error al obtener las ofertas de una tienda"
+        LOGGER.warn("#{exception} Error al obtener las ofertas de una tienda")
 
         env.response.status_code = 500
 
@@ -905,7 +913,7 @@ class Shop
         env.response.status_code = 200
         {offer: offer}.to_json
       rescue exception
-        puts "#{exception} Error al obtener la oferta"
+        LOGGER.warn("#{exception} Error al obtener la oferta")
 
         env.response.status_code = 500
 
