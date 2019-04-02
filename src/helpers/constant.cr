@@ -4,6 +4,7 @@ ROUTES_EXCLUDE = [
   "/shops/offers/:lat/:lon",
   "/shops/:lat/:lon",
   "/shop/:shop_id/offers",
+  "/shop/offer/:offer_id",
 ]
 
 ONLY_ROUTES = [
