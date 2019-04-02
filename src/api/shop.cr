@@ -820,6 +820,63 @@ class Shop
         {message: "Error al actualizar oferta", status: 500}.to_json
       end
     end
+
+    get "#{url}/shop/:shop_id/offers" do |env|
+      shop_id = env.params.url["shop_id"]
+      status = env.params.query.has_key?("status") ? env.params.query["status"] : nil
+      limit = env.params.query.has_key?("limit") ? env.params.query["limit"] : 10
+      last_id = env.params.query.has_key?("last_id") ? env.params.query["last_id"] : 0
+
+      begin
+        if shop_id.nil?
+          raise Exception.new("Params shop_id not found")
+        end
+
+        offers = DB_K
+          .select([
+          :offers_id,
+          :title,
+          :description,
+          :date_end,
+          :image_url,
+          :active,
+          :lat,
+          :lon,
+        ])
+          .table(:offers)
+          .where(:shop_id, shop_id.to_i)
+
+        case status
+        when "actives"
+          offers.and(:active, 1)
+        when "inactive"
+          offers.and(:active, 0)
+        end
+
+        offers = offers
+          .and(:offers_id, last_id.to_i, ">=")
+          .limit(limit)
+          .execute_query
+
+        last_id_result = 0
+
+        if !offers.not_nil!.empty?
+          last_id_result = offers.not_nil!.last["offers_id"]
+        end
+
+        env.response.status_code = 200
+        {
+          offers:  offers,
+          last_id: last_id_result,
+        }.to_json
+      rescue exception
+        puts "#{exception} Error al obtener las ofertas de una tienda"
+
+        env.response.status_code = 500
+
+        {message: "Error al obtener las ofertas de una tienda"}.to_json
+      end
+    end
   end
 
   def self.validateField(field, env)
