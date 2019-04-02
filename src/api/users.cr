@@ -24,10 +24,11 @@ class Users
             {message: "Usario o contraseña incorrecto", status: 403}.to_json
           end
         rescue exception
-          puts "#{exception} login"
+          LOGGER.warn("#{exception} login")
           {message: "Usario o contraseña incorrecto", status: 401}.to_json
         end
       else
+        LOGGER.warn("Error al enviar parametros al iniciar sesión")
         env.response.status_code = 400
       end
     end
@@ -61,13 +62,14 @@ class Users
           env.response.status_code = 200
           {message: "user create", status: 200}.to_json
         rescue exception
-          puts "#{exception} > s"
+          LOGGER.warn("#{exception} > registro")
 
           env.response.status_code = 500
 
           {message: "Error al registrarse.", status: 500}.to_json
         end
       else
+        LOGGER.warn("Error de parametros en registro")
         env.response.status_code = 400
         {message: "Faltan parametros.", status: 500}.to_json
       end
@@ -88,7 +90,7 @@ class Users
           {message: "error with user data"}.to_json
         end
       rescue exception
-        puts exception
+        LOGGER.warn("#{exception} perfil")
 
         env.response.status_code = 404
         {message: "error with user data"}.to_json
@@ -152,6 +154,7 @@ class Users
             arr_field_user << "password"
             arr_data_user << new_password_token.to_s
           else
+            LOGGER.info("Error al contraseña")
             env.response.status_code = 400
             {message: "Contraseña incorrecta"}.to_json
           end
@@ -166,7 +169,7 @@ class Users
         env.response.status_code = 200
         {message: "Datos actualizados"}.to_json
       rescue exception
-        puts exception
+        LOGGER.warn("#{exception} Error al actualizar perfil")
         env.response.status_code = 500
         {message: "Error en servidor"}.to_json
       end
@@ -178,7 +181,7 @@ class Users
         env.response.status_code = 200
         {message: "Sesion cerrada"}.to_json
       rescue exception
-        puts "#{exception} logout"
+        LOGGER.warn("#{exception} logout")
 
         {message: "Error al cerrar sesion"}.to_json
       end
