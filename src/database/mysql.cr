@@ -227,6 +227,7 @@ class Database
       result
     rescue exception
       error = "#{exception} execute_query"
+      raise Exception.new("#{exception}")
       self.clear
       puts error
     end

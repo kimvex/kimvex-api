@@ -877,6 +877,41 @@ class Shop
         {message: "Error al obtener las ofertas de una tienda"}.to_json
       end
     end
+
+    get "#{url}/shop/offer/:offer_id" do |env|
+      offer_id = env.params.url.has_key?("offer_id") ? env.params.url["offer_id"] : nil
+
+      begin
+        if offer_id.nil?
+          raise Exception.new("Params offer_id not found")
+        end
+
+        offer = DB_K
+          .select([
+          :offers_id,
+          :title,
+          :description,
+          :date_end,
+          :image_url,
+          :active,
+          :lat,
+          :lon,
+        ])
+          .table(:offers)
+          .join(:LEFT, :shop, [:shop_id, :shop_name, :cover_image], [:shop_id, :shop_id])
+          .where(:offers_id, offer_id.to_i)
+          .execute_query
+
+        env.response.status_code = 200
+        {offer: offer}.to_json
+      rescue exception
+        puts "#{exception} Error al obtener la oferta"
+
+        env.response.status_code = 500
+
+        {message: "Error al obtener la oferta"}.to_json
+      end
+    end
   end
 
   def self.validateField(field, env)
