@@ -1,7 +1,9 @@
 ROUTES_EXCLUDE = [
   "/api/users/login",
   "/api/users/register",
-  "/shops/offers",
+  "/shops/offers/:lat/:lon",
+  "/shops/:lat/:lon",
+  "/shop/:shop_id/offers",
 ]
 
 ONLY_ROUTES = [
@@ -22,4 +24,5 @@ ONLY_ROUTES = [
   "/api/images/shop",
   "/api/shop/:shop_id",
   "/shop/:shop_id/update",
+  "/shop/lock/:shop_id",
 ]
