@@ -11,6 +11,9 @@ require "./database/mongodb.cr"
 require "./helpers/authentication.cr"
 require "./helpers/validations.cr"
 require "./helpers/cloudinary.cr"
+require "./helpers/logger"
+
+LOGGER = LoggerK.new
 
 DB_K       = Database.new
 REDIS      = RedisDatabase.connect
