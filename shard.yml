@@ -1,5 +1,5 @@
 name: serviciosK
-version: 0.1.0
+version: 0.1.1
 
 authors:
   - Benjamin De la Cruz MArtinez <chomi.numb.94@gmail.com>
@@ -25,6 +25,6 @@ dependencies:
   bson:
     github: jeromegn/bson.cr
 
-crystal: 0.24.2
+crystal: 0.27.2
 
 license: MIT
