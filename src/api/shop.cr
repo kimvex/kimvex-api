@@ -313,7 +313,7 @@ class Shop
       rescue exception
         LOGGER.warn("#{exception}")
 
-        {message: "Error al obtener los comentarios."}.to_json
+        {message: "Error al obtener los comentarios"}.to_json
       end
     end
 
