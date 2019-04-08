@@ -10,11 +10,12 @@ class Users
             .select([:user_id, :password])
             .table(:usersk)
             .where(:email, email)
+            .and(:status, 1)
             .first
 
           if user.empty?
             env.response.status_code = 404
-            {message: "El usuario no existe", status: 404}.to_json
+            {message: "El usuario no existe ó no esta verificado", status: 404}.to_json
           elsif user && Token.verifyPassword(user["password"]) == password
             token = Token.generateToken(password)
             REDIS.set(token, user["user_id"])
