@@ -1,3 +1,5 @@
+require "http/client"
+
 class Users
   def self.setPathApi(url : String)
     post "#{url}/users/login" do |env|
@@ -54,14 +56,21 @@ class Users
           user << age
           user << phone
           user << gender
+          user << false
 
-          DB_K
+          user_id = DB_K
             .table(:usersk)
-            .insert([:fullname, :email, :password, :age, :phone, :gender], user)
+            .insert([:fullname, :email, :password, :age, :phone, :gender, :status], user)
             .execute
 
+          if !user_id.nil?
+            client = HTTP::Client.new("localhost", 3000)
+            response = client.post("/api/code_send_mail", headers: HTTP::Headers{"Content-Type" => "application/json"}, form: {"send_to" => email.to_s})
+            LOGGER.info(response.body)
+          end
+
           env.response.status_code = 200
-          {message: "user create", status: 200}.to_json
+          {message: "user create and code verification send", status: 200}.to_json
         rescue exception
           LOGGER.warn("#{exception} > registro")
 
