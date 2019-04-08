@@ -193,7 +193,65 @@ class Users
       rescue exception
         LOGGER.warn("#{exception} logout")
 
+        env.response.status_code = 500
         {message: "Error al cerrar sesion"}.to_json
+      end
+    end
+
+    post "#{url}/users/restore_password" do |env|
+      new_password = env.params.json.has_key?("new_password") ? env.params.json["new_password"].to_s : nil
+      old_password = env.params.json.has_key?("old_password") ? env.params.json["old_password"].to_s : nil
+      code = env.params.json.has_key?("code") ? env.params.json["code"].to_s : nil
+      email = env.params.json.has_key?("email") ? env.params.json["email"].to_s : nil
+
+      begin
+        if new_password.nil? || old_password.nil? || code.nil? || email.nil?
+          raise Exception.new("Faltan parametros")
+        end
+
+        code_active = DB_K
+          .select([:user_id])
+          .table(:code_restore)
+          .join(:LEFT, :usersk, [:password], [:user_id, :user_id])
+          .where(:code, code)
+          .and(:email, email)
+          .and(:active, 0)
+          .first
+
+        if !code_active.has_key?("password")
+          raise Exception.new("El codigo no existe para el correo o ya fue usado")
+        end
+
+        if Token.verifyPassword(code_active["password"]) == old_password
+          new_password_token = Token.generatePasswordHash(new_password)
+          user_id = code_active.has_key?("user_id") ? code_active.not_nil!["user_id"] : nil
+
+          if !user_id.nil?
+            DB_K
+              .table(:usersk)
+              .update([:password], [new_password_token.to_s])
+              .where(:user_id, "#{user_id}".to_i)
+              .execute
+
+            DB_K
+              .table(:code_restore)
+              .update([:active], [1])
+              .where(:code, code)
+              .and(:user_id, "#{code_active["user_id"]}".to_i)
+              .execute
+          end
+        else
+          LOGGER.info("Error al actualizar contraseña")
+          env.response.status_code = 400
+          {message: "Contraseña incorrecta"}.to_json
+        end
+
+        {message: "Contraseña actualizada"}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} Restore password")
+
+        env.response.status_code = 500
+        {message: "Error al restaurar la contraseña"}.to_json
       end
     end
   end

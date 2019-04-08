@@ -5,6 +5,7 @@ ROUTES_EXCLUDE = [
   "/shops/:lat/:lon",
   "/shop/:shop_id/offers",
   "/shop/offer/:offer_id",
+  "/api/users/restore_password",
 ]
 
 ONLY_ROUTES = [
