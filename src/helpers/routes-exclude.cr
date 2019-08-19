@@ -3,14 +3,16 @@ class ExcludeRoutes
     route = ROUTES_EXCLUDE.find { |route| route == env.request.path }
 
     begin
-      if !route && env.request.headers.has_key?("token")
-        if !REDIS.get(env.request.headers["token"])
-          env.response.status_code = 401
-          # env.response.respond_with_error(message = "Without authorization", code = 401)
-        end
+      if !route && env.request.headers.has_key?("token") ||
+         if !REDIS.get(env.request.headers["token"])
+           env.response.status_code = 401
+           # env.response.respond_with_error(message = "Without authorization", code = 401)
+         end
       else
-        if !route
-          env.response.status_code = 401
+        if env.request.method != "OPTIONS"
+          if !route
+            env.response.status_code = 401
+          end
         end
       end
     rescue exception
