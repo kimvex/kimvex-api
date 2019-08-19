@@ -6,17 +6,18 @@ class Shop
           user_id = Authentication.current_session(env.request.headers["token"])
           shop_name = env.params.json["shop_name"]
           address = env.params.json["address"]
-          phone = validateField("phone", env)
-          phone2 = validateField("phone2", env)
+          phone = env.params.json.has_key?("phone") ? "#{env.params.json["phone"].not_nil!}" : nil
+          phone2 = env.params.json.has_key?("phone2") ? "#{env.params.json["phone2"].not_nil!}" : nil
           description = validateField("description", env)
           cover_image = validateField("cover_image", env)
           logo = validateField("logo", env)
           accept_card = validateField("accept_card", env)
           list_cards = validateField("list_cards", env)
-          type_s = validateField("type_s", env)
-          service_type = validateField("service_type", env)
+          shop_schedules = env.params.json.has_key?("shop_schedules") ? env.params.json["shop_schedules"].not_nil!.as(Array) : nil
           lat = validateField("lat", env)
           lon = validateField("lon", env)
+          service_type_id = env.params.json.has_key?("service_type_id") ? "#{env.params.json["service_type_id"]}".to_i : nil
+          sub_service_type_id = env.params.json.has_key?("sub_service_type_id") ? "#{env.params.json["sub_service_type_id"]}".to_i : nil
 
           shop = [] of DB::Any
 
@@ -28,17 +29,28 @@ class Shop
           shop << cover_image
           shop << accept_card
           shop << list_cards
-          shop << type_s
           shop << lat
           shop << lon
           shop << false
           shop << user_id
           shop << logo
+          shop << service_type_id
+          shop << sub_service_type_id
 
           shop_id_insert = DB_K
             .table(:shop)
-            .insert([:shop_name, :address, :phone, :phone2, :description, :cover_image, :accept_card, :list_cards, :type_s, :lat, :lon, :score_shop, :user_id, :logo], shop)
+            .insert([:shop_name, :address, :phone, :phone2, :description, :cover_image, :accept_card, :list_cards, :lat, :lon, :score_shop, :user_id, :logo, :service_type_id, :sub_service_type_id], shop)
             .execute
+
+          services = DB_K
+            .select([
+            :sub_service_name,
+          ])
+            .table(:sub_service_type)
+            .join(:LEFT, :service_type, [:service_name], [:service_type_id, :service_type_id])
+            .where(:sub_service_type_id, sub_service_type_id)
+            .and(:service_type_id, service_type_id)
+            .execute_query
 
           MONGO.insert("shop", {
             "name"     => shop_name.to_s,
@@ -47,8 +59,9 @@ class Shop
               "type"        => "Point",
               "coordinates" => ["#{env.params.json["lon"]}".to_f, "#{env.params.json["lat"]}".to_f],
             },
-            "category" => type_s.to_s,
-            "status"   => false,
+            "category"     => services.not_nil![0]["service_name"].to_s,
+            "sub_category" => services.not_nil![0]["sub_service_name"].to_s,
+            "status"       => false,
           })
 
           if env.params.json.has_key?("list_images")
@@ -62,15 +75,13 @@ class Shop
             }
           end
 
-          if env.params.json.has_key?("service_type")
-            DB_K
-              .table(:type_service)
-              .insert([:service, :shop_id], [service_type, shop_id_insert.to_s])
-              .execute
-          end
+          DB_K
+            .table(:shop_schedules)
+            .insert([:LUN, :MAR, :MIE, :JUE, :VIE, :SAB, :DOM, :shop_id], [shop_schedules.not_nil![0].to_s, shop_schedules.not_nil![1].to_s, shop_schedules.not_nil![2].to_s, shop_schedules.not_nil![3].to_s, shop_schedules.not_nil![4].to_s, shop_schedules.not_nil![5].to_s, shop_schedules.not_nil![6].to_s, shop_id_insert.to_s])
+            .execute
 
           env.response.status_code = 200
-          {message: "Create shop success", status: 200}.to_json
+          {message: "Create shop success", shop_id: shop_id_insert, status: 200}.to_json
         else
           raise Exception.new("Name of shop or address can't empty")
         end
@@ -90,7 +101,6 @@ class Shop
 
     get "#{url}/shop/:shop_id" do |env|
       shop_id = env.params.url["shop_id"]
-      user_id = Authentication.current_session(env.request.headers["token"])
 
       begin
         shop_result = DB_K
@@ -104,18 +114,19 @@ class Shop
           :cover_image,
           :accept_card,
           :list_cards,
-          :type_s,
           :lat,
           :lon,
           :score_shop,
           :status,
+          :logo,
+          :service_type_id,
+          :sub_service_type_id,
         ])
           .table(:shop)
           .join(:LEFT, :images_shop, [:url_image], [:shop_id, :shop_id])
           .join(:LEFT, :shop_schedules, [:LUN, :MAR, :MIE, :JUE, :VIE, :SAB, :DOM], [:shop_id, :shop_id])
           .join(:LEFT, :usersk, [:user_id], [:user_id, :user_id])
           .where(:shop_id, shop_id)
-          .and(:user_id, user_id)
           .group_concat([:url_image, :images_shop, :url], :image_id, :images)
           .first
 
@@ -133,17 +144,19 @@ class Shop
       shop_id = env.params.url["shop_id"]
       shop_name = env.params.json.has_key?("shop_name") ? env.params.json["shop_name"] : nil
       address = env.params.json.has_key?("address") ? env.params.json["address"] : nil
-      phone = env.params.json.has_key?("phone") ? env.params.json["phone"] : nil
-      phone2 = env.params.json.has_key?("phone2") ? env.params.json["phone2"] : nil
+      phone = env.params.json.has_key?("phone") ? "#{env.params.json["phone"].not_nil!}" : nil
+      phone2 = env.params.json.has_key?("phone2") ? "#{env.params.json["phone2"].not_nil!}" : nil
       description = env.params.json.has_key?("description") ? env.params.json["description"] : nil
       cover_image = env.params.json.has_key?("cover_image") ? env.params.json["cover_image"] : nil
       logo = env.params.json.has_key?("logo") ? env.params.json["logo"] : nil
-      accept_card = env.params.json.has_key?("accept_card") ? env.params.json["accept_card"] : nil
+      accept_card = validateField("accept_card", env)
+      shop_schedules = env.params.json.has_key?("shop_schedules") ? env.params.json["shop_schedules"].not_nil!.as(Array) : nil
       list_cards = env.params.json.has_key?("list_cards") ? env.params.json["list_cards"] : nil
-      type_s = env.params.json.has_key?("type_s") ? env.params.json["type_s"] : nil
       service_type = env.params.json.has_key?("service_type") ? env.params.json["service_type"] : nil
       lat = env.params.json.has_key?("lat") ? env.params.json["lat"] : nil
       lon = env.params.json.has_key?("lon") ? env.params.json["lon"] : nil
+      service_type_id = env.params.json.has_key?("service_type_id") ? "#{env.params.json["service_type_id"]}".to_i : nil
+      sub_service_type_id = env.params.json.has_key?("sub_service_type_id") ? "#{env.params.json["sub_service_type_id"]}".to_i : nil
 
       field_shop_update = [] of String
       data_shop_update = [] of String | Int32 | Float64
@@ -163,12 +176,12 @@ class Shop
 
         if phone
           field_shop_update << "phone"
-          data_shop_update << "#{phone}".to_i
+          data_shop_update << phone
         end
 
         if phone2
           field_shop_update << "phone2"
-          data_shop_update << "#{phone2}".to_i
+          data_shop_update << phone2
         end
 
         if description
@@ -191,9 +204,25 @@ class Shop
           data_shop_update << list_cards.to_s
         end
 
-        if type_s
-          field_shop_update << "type_s"
-          data_shop_update << type_s.to_s
+        if service_type_id && sub_service_type_id
+          services = DB_K
+            .select([
+            :sub_service_name,
+          ])
+            .table(:sub_service_type)
+            .join(:LEFT, :service_type, [:service_name], [:service_type_id, :service_type_id])
+            .where(:sub_service_type_id, sub_service_type_id)
+            .and(:service_type_id, service_type_id)
+            .execute_query
+
+          field_shop_update << "service_type_id"
+          data_shop_update << service_type_id
+
+          field_shop_update << "sub_service_type_id"
+          data_shop_update << sub_service_type_id
+
+          mongo_update["category"] = services.not_nil![0]["service_name"].to_s
+          mongo_update["sub_category"] = services.not_nil![0]["sub_service_name"].to_s
         end
 
         if lat && lon
@@ -220,6 +249,26 @@ class Shop
           .execute
 
         MONGO.update("shop", {"shop_id" => shop_id}, {"$set" => mongo_update})
+
+        if env.params.json.has_key?("list_images")
+          list_images_array = Array(String).from_json("#{env.params.json["list_images"]}")
+
+          list_images_array.each { |url|
+            puts shop_id
+            puts url
+            DB_K
+              .table(:images_shop)
+              .insert([:url_image, :shop_id], [url, shop_id])
+              .execute
+          }
+        end
+        DB_K
+          .table(:shop_schedules)
+          .update([:LUN, :MAR, :MIE, :JUE, :VIE, :SAB, :DOM], [shop_schedules.not_nil![0].to_s, shop_schedules.not_nil![1].to_s, shop_schedules.not_nil![2].to_s, shop_schedules.not_nil![3].to_s, shop_schedules.not_nil![4].to_s, shop_schedules.not_nil![5].to_s, shop_schedules.not_nil![6].to_s])
+          .where(
+          :shop_id, shop_id
+        )
+          .execute
 
         env.response.status_code = 200
         {message: "Success update", status_code: 200}.to_json
@@ -374,7 +423,7 @@ class Shop
       end
     end
 
-    get "#{url}/shops/:lat/:lon" do |env|
+    get "#{url}/list/shops/:lat/:lon" do |env|
       limit = env.params.query.has_key?("limit") ? env.params.query["limit"].to_i : 10
       last_shop = env.params.query.has_key?("last_shop_id") ? env.params.query["last_shop_id"] : 0
       minDistance = env.params.query.has_key?("minDistance") ? env.params.query["minDistance"].to_f : 0.0
@@ -423,9 +472,10 @@ class Shop
           :phone,
           :score_shop,
           :cover_image,
-          :type_s,
         ])
           .table(:shop)
+          .join(:LEFT, :service_type, [:service_name], [:service_type_id, :service_type_id])
+          .join(:LEFT, :sub_service_type, [:sub_service_name], [:sub_service_type_id, :sub_service_type_id])
           .where_in(:shop_id, values_arr)
           .execute_query
 
@@ -500,9 +550,10 @@ class Shop
           :phone,
           :score_shop,
           :cover_image,
-          :type_s,
         ])
           .table(:shop)
+          .join(:LEFT, :service_type, [:service_name], [:service_type_id, :service_type_id])
+          .join(:LEFT, :sub_service_type, [:sub_service_name], [:sub_service_type_id, :sub_service_type_id])
           .where_in(:shop_id, values_arr)
           .execute_query
 
