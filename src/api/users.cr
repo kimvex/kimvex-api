@@ -42,7 +42,7 @@ class Users
         email = env.params.json["email"]
         fullname = env.params.json["fullname"]
         age = env.params.json.has_key?("age") ? env.params.json["age"].to_s : nil
-        phone = env.params.json.has_key?("phone") ? (env.params.json["phone"].to_s).to_i64 : nil
+        phone = env.params.json.has_key?("phone") ? "#{env.params.json["phone"].not_nil!}" : nil
         gender = env.params.json.has_key?("gender") ? env.params.json["gender"].to_s : nil
 
         token = Token.generatePasswordHash(password)
@@ -74,7 +74,7 @@ class Users
         rescue exception
           LOGGER.warn("#{exception} > registro")
 
-          env.response.status_code = 500
+          env.response.status_code = 400
 
           {message: "Error al registrarse.", status: 500}.to_json
         end
@@ -113,7 +113,7 @@ class Users
       new_password = env.params.json.has_key?("new_password") ? env.params.json["new_password"] : nil
       email = env.params.json.has_key?("email") ? env.params.json["email"] : nil
       fullname = env.params.json.has_key?("fullname") ? env.params.json["fullname"] : nil
-      phone = env.params.json.has_key?("phone") ? (env.params.json["phone"].to_s).to_i64 : nil
+      phone = env.params.json.has_key?("phone") ? "#{env.params.json["phone"].not_nil!}" : nil
       url_image = env.params.json.has_key?("image_url") ? env.params.json["image_url"] : nil
       age = env.params.json.has_key?("age") ? env.params.json["age"].to_s : nil
       gender = env.params.json.has_key?("gender") ? env.params.json["gender"] : nil
