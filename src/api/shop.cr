@@ -280,6 +280,45 @@ class Shop
       end
     end
 
+    get "#{url}/profile/shops" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+
+      begin
+        shop_result = DB_K
+          .select([
+          :shop_id,
+          :shop_name,
+          :address,
+          :phone,
+          :phone2,
+          :description,
+          :cover_image,
+          :accept_card,
+          :list_cards,
+          :lat,
+          :lon,
+          :score_shop,
+          :status,
+        ])
+          .table(:shop)
+          .join(:LEFT, :images_shop, [:url_image], [:shop_id, :shop_id])
+          .join(:LEFT, :service_type, [:service_name], [:service_type_id, :service_type_id])
+          .join(:LEFT, :sub_service_type, [:sub_service_name], [:sub_service_type_id, :sub_service_type_id])
+          .join(:LEFT, :shop_schedules, [:LUN, :MAR, :MIE, :JUE, :VIE, :SAB, :DOM], [:shop_id, :shop_id])
+          .join(:LEFT, :plans_pay, [:date_init, :date_finish], [:shop_id, :shop_id])
+          .join(:LEFT, :usersk, [:user_id], [:user_id, :user_id])
+          .where(:user_id, user_id.to_i)
+          .group_concat([:url_image, :images_shop, :url], :image_id, :images)
+          .execute_query
+
+        {result: shop_result}.to_json
+      rescue exception
+        LOGGER.warn("#{exception}")
+        env.response.status_code = 500
+        {message: "Error al obtener las propiedades"}.to_json
+      end
+    end
+
     post "#{url}/shops/:shop_id/update/images" do |env|
       user_id = Authentication.current_session(env.request.headers["token"])
       shop_id = env.params.url["shop_id"]
