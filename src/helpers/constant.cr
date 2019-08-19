@@ -6,9 +6,11 @@ ROUTES_EXCLUDE = [
   "/shop/:shop_id/offers",
   "/shop/offer/:offer_id",
   "/api/users/restore_password",
+  "/api/shop/:shop_id",
 ]
 
 ONLY_ROUTES = [
+  "/api/profile/shops",
   "/api/users/profile",
   "/api/users/logout",
   "/api/users/update/profile",
@@ -24,7 +26,35 @@ ONLY_ROUTES = [
   "/api/images/shop/logo",
   "/api/images/shop/cover",
   "/api/images/shop",
-  "/api/shop/:shop_id",
   "/shop/:shop_id/update",
   "/shop/lock/:shop_id",
+]
+
+OPTIONS_HTTP_ALLOW = [
+  "/api/users/login",
+  "/api/users/register",
+  "/api/shops/offers/:lat/:lon",
+  "/api/shops/list/:lat/:lon",
+  "/api/shops/:shop_id/update/images",
+  "/api/shops/:shop_id/image",
+  "/api/shop/:shop_id/offers",
+  "/api/shop/:shop_id/comment",
+  "/api/shop/:shop_id/comments",
+  "/api/shop/:shop_id/update",
+  "/api/shop/:shop_id",
+  "/api/shop/offer/:offer_id",
+  "/api/users/restore_password",
+  "/api/users/profile",
+  "/api/users/logout",
+  "/api/user/update/profile",
+  "/api/shop",
+  "/api/find/shops/:lat/:lon",
+  "/api/shop/offers",
+  "/api/shop/offers/:offer_id",
+  "/api/images/avatar",
+  "/api/images/shop/logo",
+  "/api/images/shop/cover",
+  "/api/images/shop",
+  "/api/shop/lock/:shop_id",
+  "/api/profile/shops",
 ]
