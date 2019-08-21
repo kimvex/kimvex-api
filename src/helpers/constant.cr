@@ -7,6 +7,7 @@ ROUTES_EXCLUDE = [
   "/shop/offer/:offer_id",
   "/api/users/restore_password",
   "/api/shop/:shop_id",
+  "/api/list/shops/:lat/:lon",
 ]
 
 ONLY_ROUTES = [
@@ -57,4 +58,5 @@ OPTIONS_HTTP_ALLOW = [
   "/api/images/shop",
   "/api/shop/lock/:shop_id",
   "/api/profile/shops",
+  "/api/list/shops/:lat/:lon",
 ]
