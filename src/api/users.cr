@@ -89,7 +89,7 @@ class Users
       user_id = Authentication.current_session(env.request.headers["token"])
       begin
         user = DB_K
-          .select([:fullname, :email, :phone, :age, :gender, :image, :create_at])
+          .select([:user_id, :fullname, :email, :phone, :age, :gender, :image, :create_at])
           .table(:usersk)
           .where(:user_id, user_id)
           .first
