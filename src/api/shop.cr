@@ -1010,6 +1010,25 @@ class Shop
         {message: "Error al obtener la oferta"}.to_json
       end
     end
+
+    get "#{url}/services" do |env|
+      begin
+        services = DB_K
+          .select([
+          :service_type_id,
+          :service_name,
+        ])
+          .table(:service_type)
+          .execute_query
+
+        {services: services.not_nil!}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} Error al obtener los servicios")
+
+        env.response.status_code = 500
+        {message: "Error al obtener los servicios"}
+      end
+    end
   end
 
   def self.validateField(field, env)
