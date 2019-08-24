@@ -391,10 +391,13 @@ class Shop
         comments = DB_K
           .select([
           :comment,
+          :create_date_at,
         ])
           .table(:shop_comments)
           .join(:LEFT, :usersk, [:user_id, :fullname, :image], [:user_id, :user_id])
           .where(:shop_id, shop_id.to_i)
+          .order_by([:create_date_at])
+          .order_direction
           .execute_query
 
         comments.to_json
