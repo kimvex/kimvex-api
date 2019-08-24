@@ -465,6 +465,57 @@ class Shop
       end
     end
 
+    get "#{url}/shop/:shop_id/score/:user_id" do |env|
+      shop_id = env.params.url["shop_id"]
+      user_id = env.params.url["user_id"]
+
+      begin
+        score_shop = DB_K
+          .select([
+          :score,
+        ])
+          .table(:shop_score_users)
+          .where(:shop_id, shop_id.to_i)
+          .and(:user_id, user_id.to_i)
+          .first
+
+        score_shop.to_json
+      rescue exception
+        LOGGER.warn("#{exception}")
+
+        env.response.status_code = 500
+
+        {message: "Error al obtener la calificacion dada por el usuario"}.to_json
+      end
+    end
+
+    put "#{url}/shop/:shop_id/score/:user_id" do |env|
+      shop_id = env.params.url["shop_id"]
+      user_id = env.params.url["user_id"]
+      score = env.params.json.has_key?("score") ? "#{env.params.json["score"]}".to_i : nil
+
+      begin
+        if score.not_nil!
+          DB_K
+            .table(:shop_score_users)
+            .update(["score"], [score])
+            .where(:user_id, user_id.to_i)
+            .and(:shop_id, shop_id.to_i)
+            .execute
+
+          {message: "Calificacion actualizada"}.to_json
+        else
+          raise Exception.new("Score can't be empty")
+        end
+      rescue exception
+        LOGGER.warn("#{exception}")
+
+        env.response.status_code = 500
+
+        {message: "Error al actualizar la calificación"}.to_json
+      end
+    end
+
     get "#{url}/list/shops/:lat/:lon" do |env|
       limit = env.params.query.has_key?("limit") ? env.params.query["limit"].to_i : 10
       last_shop = env.params.query.has_key?("last_shop_id") ? env.params.query["last_shop_id"] : 0

@@ -31,6 +31,7 @@ ONLY_ROUTES = [
   "/api/shop/:shop_id/update",
   "/api/shop/lock/:shop_id",
   "/api/shop/:shop_id/score",
+  "/api/shop/:shop_id/score/:user_id",
 ]
 
 OPTIONS_HTTP_ALLOW = [
@@ -63,4 +64,5 @@ OPTIONS_HTTP_ALLOW = [
   "/api/list/shops/:lat/:lon",
   "/api/services",
   "/api/shop/:shop_id/score",
+  "/api/shop/:shop_id/score/:user_id",
 ]
