@@ -111,6 +111,7 @@ class Database
   end
 
   def group_by(fields = "", group_field = "")
+    group_field = "#{group_field.not_nil!}"
     if fields
       fields = fields.split(" ")[1].lstrip
     end
@@ -120,7 +121,7 @@ class Database
       end
     }
 
-    @query = "#{@query} GROUP BY #{group_field.not_nil! ? group_fields.join(",") : group_field}"
+    @query = "#{@query} GROUP BY #{group_field.empty? ? group_fields.join(",") : group_field}"
     self
   end
 
