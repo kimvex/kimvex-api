@@ -9,7 +9,7 @@ ROUTES_EXCLUDE = [
   "/api/shop/:shop_id",
   "/api/list/shops/:lat/:lon",
   "/api/services",
-  "/find/shops/:lat/:lon",
+  "/api/find/shops/:lat/:lon",
 ]
 
 ONLY_ROUTES = [
@@ -18,18 +18,19 @@ ONLY_ROUTES = [
   "/api/users/logout",
   "/api/users/update/profile",
   "/api/shop",
-  "/shops/:shop_id/update/images",
-  "/shops/:shop_id/image",
-  "/shop/:shop_id/comment",
-  "/shop/:shop_id/comments",
-  "/shop/offers",
-  "/shop/offers/:offer_id",
+  "/api/shops/:shop_id/update/images",
+  "/api/shops/:shop_id/image",
+  "/api/shop/:shop_id/comment",
+  "/api/shop/:shop_id/comments",
+  "/api/shop/offers",
+  "/api/shop/offers/:offer_id",
   "/api/images/avatar",
   "/api/images/shop/logo",
   "/api/images/shop/cover",
   "/api/images/shop",
-  "/shop/:shop_id/update",
-  "/shop/lock/:shop_id",
+  "/api/shop/:shop_id/update",
+  "/api/shop/lock/:shop_id",
+  "/api/shop/:shop_id/score",
 ]
 
 OPTIONS_HTTP_ALLOW = [
@@ -61,4 +62,5 @@ OPTIONS_HTTP_ALLOW = [
   "/api/profile/shops",
   "/api/list/shops/:lat/:lon",
   "/api/services",
+  "/api/shop/:shop_id/score",
 ]
