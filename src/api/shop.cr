@@ -734,8 +734,6 @@ class Shop
       date_init = env.params.json.has_key?("date_init") ? env.params.json["date_init"].to_s : nil
       date_end = env.params.json.has_key?("date_end") ? env.params.json["date_end"].to_s : nil
       image_url = env.params.json.has_key?("image_url") ? env.params.json["image_url"].to_s : nil
-      lat = validateField("lat", env)
-      lon = validateField("lon", env)
 
       begin
         is_owner = DB_K
@@ -745,12 +743,22 @@ class Shop
           .table(:shop)
           .where(:user_id, user_id.to_i)
           .and(:shop_id, shop_id)
-          .and(:status, 1)
+          .and(:status, true)
           .execute_query
 
         if is_owner.not_nil!.size < 1
           raise Exception.new("Not is owner or active shop")
         end
+
+        position = DB_K
+          .select([
+          :lat,
+          :lon,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .first
 
         offer_id_insert = DB_K
           .table(:offers)
@@ -773,8 +781,8 @@ class Shop
             date_init,
             date_end,
             image_url,
-            lat,
-            lon,
+            position["lat"].not_nil!.to_s,
+            position["lon"].not_nil!.to_s,
           ])
           .execute
 
@@ -784,7 +792,7 @@ class Shop
           "title"    => title,
           "location" => {
             "type"        => "Point",
-            "coordinates" => ["#{env.params.json["lon"]}".to_f, "#{env.params.json["lat"]}".to_f],
+            "coordinates" => ["#{position["lon"]}".to_f, "#{position["lat"]}".to_f],
           },
           "date_init" => date_init,
           "date_end"  => date_end,
@@ -792,7 +800,7 @@ class Shop
         })
 
         env.response.status_code = 200
-        {message: "Created offers", status: 200}.to_json
+        {message: "Created offers", offer_id: offer_id_insert, status: 200}.to_json
       rescue exception
         LOGGER.warn("#{exception} exception to create offer")
 
@@ -887,10 +895,9 @@ class Shop
       title = env.params.json.has_key?("title") ? env.params.json["title"].to_s : nil
       description = env.params.json.has_key?("description") ? env.params.json["description"].to_s : nil
       date_end = env.params.json.has_key?("date_end") ? env.params.json["date_end"].to_s : nil
+      date_init = env.params.json.has_key?("date_init") ? env.params.json["date_init"].to_s : nil
       image_url = env.params.json.has_key?("image_url") ? env.params.json["image_url"].to_s : nil
       active = env.params.json.has_key?("active") ? (env.params.json["active"].to_s).to_i : nil
-      lat = validateField("lat", env)
-      lon = validateField("lon", env)
 
       begin
         is_owner = DB_K
@@ -907,8 +914,18 @@ class Shop
           raise Exception.new("Not is owner or active shop")
         end
 
+        position = DB_K
+          .select([
+          :lat,
+          :lon,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .first
+
         arr_fields = [] of String
-        arr_values = [] of String | Int32 | Float64
+        arr_values = [] of String | Int32 | Float64 | Bool
         mongo_update = {} of String => Hash(String, String | Array(Float64)) | String | Bool
 
         if title
@@ -930,27 +947,35 @@ class Shop
           mongo_update["date_end"] = date_end
         end
 
+        if date_init
+          arr_fields << "date_init"
+          arr_values << date_init
+
+          mongo_update["date_init"] = date_init
+        end
+
         if image_url
           arr_fields << "image_url"
           arr_values << image_url
         end
 
         if active
+          active_value = active === 1 ? true : false
           arr_fields << "active"
-          arr_values << active
+          arr_values << active_value
 
           mongo_update["active"] = active < 1 ? false : true
         end
 
-        if lat && lon
+        if position["lat"] && position["lon"]
           arr_fields << "lat"
-          arr_values << "#{lat}".to_f
+          arr_values << "#{position["lat"].not_nil!}".to_f
           arr_fields << "lon"
-          arr_values << "#{lon}".to_f
+          arr_values << "#{position["lon"].not_nil!}".to_f
 
           mongo_update["location"] = {
             "type"        => "Point",
-            "coordinates" => ["#{lon}".to_f, "#{lat}".to_f],
+            "coordinates" => ["#{position["lon"].not_nil!.to_s}".to_f, "#{position["lat"].not_nil!.to_s}".to_f],
           }
         end
 
@@ -989,6 +1014,7 @@ class Shop
           :offers_id,
           :title,
           :description,
+          :date_init,
           :date_end,
           :image_url,
           :active,
