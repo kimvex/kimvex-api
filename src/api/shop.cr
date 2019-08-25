@@ -1091,6 +1091,48 @@ class Shop
       end
     end
 
+    put "#{url}/shop/:shop_id/offer/:offer_id/disabled" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      offer_id = env.params.url.has_key?("offer_id") ? env.params.url["offer_id"] : nil
+      shop_id = env.params.url.has_key?("shop_id") ? env.params.url["shop_id"] : nil
+
+      begin
+        is_owner = DB_K
+          .select([
+          :shop_id,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .execute_query
+
+        if is_owner.not_nil!.size < 1
+          raise Exception.new("Not is owner or active shop")
+        end
+
+        DB_K
+          .table(:offers)
+          .update([:active], [false])
+          .where(:offers_id, offer_id)
+          .and(:user_id, user_id)
+          .and(:shop_id, shop_id)
+          .execute
+
+        MONGO.update("offers", {"offer_id" => offer_id.to_s}, {"$set" => {
+                                                                 "active" => false,
+                                                               }})
+
+        env.response.status_code = 200
+        {message: "Success update", status_code: 200}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} Error al desactivar la oferta")
+
+        env.response.status_code = 500
+
+        {message: "Error al desactivar la oferta"}.to_json
+      end
+    end
+
     get "#{url}/services" do |env|
       begin
         services = DB_K
