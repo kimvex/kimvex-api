@@ -42,6 +42,11 @@ class Shop
             .insert([:shop_name, :address, :phone, :phone2, :description, :cover_image, :accept_card, :list_cards, :lat, :lon, :score_shop, :user_id, :logo, :service_type_id, :sub_service_type_id], shop)
             .execute
 
+          DB_K
+            .table(:pages)
+            .insert([:shop_id], [shop_id_insert])
+            .execute
+
           services = DB_K
             .select([
             :sub_service_name,
@@ -503,6 +508,21 @@ class Shop
             .and(:shop_id, shop_id.to_i)
             .execute
 
+          score_shop = DB_K
+            .select([
+            :score,
+          ])
+            .table(:shop_score_users)
+            .where(:shop_id, shop_id.to_i)
+            .avg(:score, :score_shop, :shop_id)
+            .execute_query
+
+          DB_K
+            .table(:shop)
+            .update([:score_shop], ["#{score_shop.not_nil![0]["score_shop"]}".to_f.round(1)])
+            .where(:shop_id, shop_id)
+            .execute
+
           {message: "Calificacion actualizada"}.to_json
         else
           raise Exception.new("Score can't be empty")
@@ -714,6 +734,12 @@ class Shop
           .and(:user_id, user_id)
           .execute
 
+        DB_K
+          .table(:pages)
+          .update(["active"], [0])
+          .where(:shop_id, shop_id)
+          .execute
+
         MONGO.update("shop", {"shop_id" => shop_id}, {"$set" => mongo_update_shop})
         MONGO.update_many("offers", {"shop_id" => shop_id.to_s}, {"$set" => mongo_update_offers})
 
@@ -850,8 +876,10 @@ class Shop
         end
 
         get_offers.map { |value|
-          values_arr << "#{value["shop_id"]}".to_i
+          values_arr << "#{value["offer_id"]}".to_i
         }
+
+        puts "#{get_offers}"
 
         offers = DB_K
           .select([
@@ -863,7 +891,7 @@ class Shop
         ])
           .table(:offers)
           .join(:LEFT, :shop, [:shop_id, :shop_name, :cover_image], [:shop_id, :shop_id])
-          .where_in(:shop_id, values_arr)
+          .where_in(:offers_id, values_arr)
           .execute_query
 
         order_offers = get_offers.not_nil!.map { |offers_data|
@@ -871,6 +899,7 @@ class Shop
             "#{offers_data["shop_id"]}".to_i == hash_r["shop_id"]
           }
 
+          offers.not_nil!.delete(hash_match)
           hash_match.not_nil!["distance"] = offers_data["distance"]
           hash_match
         }
