@@ -33,6 +33,12 @@ ONLY_ROUTES = [
   "/api/shop/:shop_id/score",
   "/api/shop/:shop_id/score/:user_id",
   "/api/shop/:shop_id/offer/:offer_id/disabled",
+  "/api/user/referrals",
+  "/api/user/my_code",
+  "/api/user/refferals_fail",
+  "/api/user/earned_referrals",
+  "/api/user/earned_referrals_month",
+  "/api/code/auth",
 ]
 
 OPTIONS_HTTP_ALLOW = [
@@ -67,4 +73,10 @@ OPTIONS_HTTP_ALLOW = [
   "/api/shop/:shop_id/score",
   "/api/shop/:shop_id/score/:user_id",
   "/api/shop/:shop_id/offer/:offer_id/disabled",
+  "/api/user/referrals",
+  "/api/user/my_code",
+  "/api/user/refferals_fail",
+  "/api/user/earned_referrals",
+  "/api/user/earned_referrals_month",
+  "/api/code/auth",
 ]
