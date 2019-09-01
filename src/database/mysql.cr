@@ -57,13 +57,47 @@ class Database
     self
   end
 
-  def where(field = "", value = "", operator = "=")
+  def where(field = "", value = "", operator = "=", value_null = nil)
     if @query.includes?("JOIN")
-      @query = "#{@query} WHERE #{@table}.#{field} #{operator} ?"
+      if value_null.nil?
+        @query = "#{@query} WHERE #{@table}.#{field} #{operator} ?"
+      else
+        is_not_null = value_null === true ? "NOT NULL" : "NULL"
+        @query = "#{@query} WHERE #{@table}.#{field} IS #{is_not_null} "
+      end
     else
-      @query = "#{@query} WHERE #{field} #{operator} ?"
+      if value_null.nil?
+        @query = "#{@query} WHERE #{field} #{operator} ?"
+      else
+        is_not_null = value_null === true ? "NOT NULL" : "NULL"
+        @query = "#{@query} WHERE #{field} IS #{is_not_null}"
+      end
     end
     @values_insert_update << value
+    self
+  end
+
+  def where_table(table = "", field = "", value = "", operator = "=", value_null = nil)
+    if value_null.nil?
+      @query = "#{@query} WHERE #{table}.#{field} #{operator} ?"
+    else
+      is_not_null = value_null === true ? "NOT NULL" : "NULL"
+      @query = "#{@query} WHERE #{table}.#{field} IS #{is_not_null} "
+    end
+    @values_insert_update << value
+    self
+  end
+
+  def where_beeween(field = "", values = nil, table = nil)
+    if !values.nil?
+      if table.nil?
+        @query = "#{@query} WHERE #{field} BETWEEN ? AND ?"
+      else
+        @query = "#{@query} WHERE #{table}.#{field} BETEEN ? AND ?"
+      end
+      @values_insert_update << values.not_nil![0]
+      @values_insert_update << values.not_nil![1]
+    end
     self
   end
 
@@ -78,11 +112,33 @@ class Database
     self
   end
 
-  def and(field = "", value = "", operator = "=")
+  def and(field = "", value = "", operator = "=", value_null = nil)
     if @query.includes?("JOIN")
-      @query = "#{@query} AND #{@table}.#{field} #{operator} ?"
+      if value_null.nil?
+        @query = "#{@query} AND #{@table}.#{field} #{operator} ?"
+        @values_insert_update << value
+      else
+        is_not_null = value_null === true ? "NOT NULL" : "NULL"
+        @query = "#{@query} AND #{@table}.#{field} IS #{is_not_null}"
+      end
     else
-      @query = "#{@query} AND #{field} #{operator} ?"
+      if value_null.nil?
+        @query = "#{@query} AND #{field} #{operator} ?"
+        @values_insert_update << value
+      else
+        is_not_null = value_null === true ? "NOT NULL" : "NULL"
+        @query = "#{@query} AND #{field} IS #{is_not_null}"
+      end
+    end
+    self
+  end
+
+  def and_table(table = "", field = "", value = "", operator = "=", value_null = nil)
+    if value_null.nil?
+      @query = "#{@query} AND #{table}.#{field} #{operator} ?"
+    else
+      is_not_null = value_null === true ? "NOT NULL" : "NULL"
+      @query = "#{@query} AND #{table}.#{field} IS #{is_not_null}"
     end
     @values_insert_update << value
     self
@@ -110,18 +166,21 @@ class Database
     self
   end
 
-  def group_by(fields = "", group_field = "")
+  def group_by(fields = "", group_field = "", join_table = nil)
     group_field = "#{group_field.not_nil!}"
     if fields
       fields = fields.split(" ")[1].lstrip
     end
     group_fields = fields.split(",").map { |field|
-      if !field.includes?("AVG")
+      if !field.includes?("AVG") && !field.includes?("SUM")
         field
       end
     }
-
-    @query = "#{@query} GROUP BY #{group_field.empty? ? group_fields.join(",") : group_field}"
+    if join_table.nil?
+      @query = "#{@query} GROUP BY #{group_field.empty? ? group_fields.join(",") : group_field}"
+    else
+      @query = "#{@query} GROUP BY #{join_table}.#{group_field.empty? ? group_fields.join(",") : group_field}"
+    end
     self
   end
 
@@ -140,7 +199,7 @@ class Database
     self
   end
 
-  def join(position, table, selects = [] of DB::Any, clause = [] of DB::Any)
+  def join(position, table, selects = [] of DB::Any, clause = [] of DB::Any, extra_table = [] of DB::Any)
     query_sql_plit = @query.split(" ")[1].lstrip
     query_sql_principal = query_sql_plit.split(",").map { |field|
       field.includes?(".") ? field : "#{@table}.#{field}"
@@ -149,9 +208,9 @@ class Database
 
     if @query.includes?("JOIN")
       split_query = @query.split("SELECT ")
-      @query = "#{split_query[0]}#{query_sql_join.join(",")},#{split_query[1]} #{position} JOIN #{table} ON #{@table}.#{clause[0]} = #{table}.#{clause[1]}"
+      @query = "#{split_query[0]}#{query_sql_join.join(",")},#{split_query[1]} #{position} JOIN #{table} ON #{!extra_table.empty? ? extra_table[0] : @table}.#{clause[0]} = #{table}.#{clause[1]}"
     else
-      @query = "#{query_sql_principal.join(",")},#{query_sql_join.join(",")} FROM #{@table} #{position} JOIN #{table} ON #{@table}.#{clause[0]} = #{table}.#{clause[1]}"
+      @query = "#{query_sql_principal.join(",")},#{query_sql_join.join(",")} FROM #{@table} #{position} JOIN #{table} ON #{!extra_table.empty? ? extra_table[0] : @table}.#{clause[0]} = #{table}.#{clause[1]}"
     end
 
     @query = "SELECT #{@query}"
@@ -181,6 +240,32 @@ class Database
     @query = "SELECT #{restructure_query_select.join(",")}#{@query.split("SELECT #{field}")[1]}"
 
     group_by(query, group)
+
+    self
+  end
+
+  def sum(field, alias_as, group, join_table = nil)
+    index = 0
+    query = @query
+    restructure_query_select = query.split(",").map { |field_map|
+      index = field_map.index(".#{field}")
+      value_equal = ""
+
+      if index
+        value_equal = "#{field_map}"[index..-1]
+      end
+
+      if field_map.includes?(".#{field}") && value_equal == ".#{field}"
+        field_map.gsub("#{field_map}", "SUM(#{field_map}) #{alias_as}")
+      elsif field_map.includes?("#{field}") && value_equal == ".#{field}"
+        field_map.gsub("#{field}", "SUM(#{field}) #{alias_as}")
+      else
+        field_map.gsub("#{field_map}", "SUM(#{field}) #{alias_as}")
+      end
+    }
+
+    @query = "SELECT #{restructure_query_select[0]},#{@query.split("SELECT ")[1]}"
+    group_by(query, group, join_table)
 
     self
   end
@@ -228,8 +313,8 @@ class Database
       result
     rescue exception
       error = "#{exception} execute_query"
-      raise Exception.new("#{exception}")
       self.clear
+      raise Exception.new("#{exception}")
       puts error
     end
   end
