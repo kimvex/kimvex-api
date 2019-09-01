@@ -1,5 +1,3 @@
-require "http/client"
-
 class Users
   def self.setPathApi(url : String)
     post "#{url}/users/login" do |env|
@@ -64,8 +62,16 @@ class Users
             .execute
 
           if !user_id.nil?
-            client = HTTP::Client.new("localhost", 3000)
-            response = client.post("/api/code_send_mail", headers: HTTP::Headers{"Content-Type" => "application/json"}, form: {"send_to" => email.to_s})
+            code_reference = "#{Random::Secure.hex(2).upcase}-#{Random::Secure.hex(2).upcase}-#{Random::Secure.hex(2).upcase}-#{Random::Secure.hex(2).upcase}"
+
+            DB_K
+              .table(:code_reference)
+              .insert([:code, :user_id], [code_reference, user_id])
+              .execute
+
+            # client = HTTP::Client.new("https://process.kimvex.com")
+            # client.tls = true
+            response = HTTP::Client.post("https://process.kimvex.com/api/code_send_mail", headers: HTTP::Headers{"Content-Type" => "application/json"}, form: {"send_to" => email.to_s})
             LOGGER.info(response.body)
           end
 
@@ -91,6 +97,7 @@ class Users
         user = DB_K
           .select([:user_id, :fullname, :email, :phone, :age, :gender, :image, :create_at])
           .table(:usersk)
+          .join(:LEFT, :code_reference, [:code], [:user_id, :user_id])
           .where(:user_id, user_id)
           .first
         if user
