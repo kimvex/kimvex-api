@@ -261,5 +261,146 @@ class Users
         {message: "Error al restaurar la contraseña"}.to_json
       end
     end
+
+    get "#{url}/code/auth" do |env|
+      reffer_code = env.params.query.has_key?("reffer_code") ? env.params.query["reffer_code"] : nil
+
+      begin
+        puts "#{reffer_code}"
+        exist_code = DB_K
+          .select([
+          :code,
+          :code_reference_id,
+        ])
+          .table(:code_reference)
+          .where(:code, reffer_code.not_nil!)
+          .first
+
+        {validate: exist_code}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} Error al obtener el coódigo de verificación")
+
+        env.response.status_code = 500
+        {message: "Error al obtener los servicios"}.to_json
+      end
+    end
+
+    get "#{url}/user/referrals" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+
+      begin
+        referrals = DB_K
+          .select([:refund_id, :money_win, :day_used])
+          .table(:code_used)
+          .join(:LEFT, :code_reference, [:user_id], [:code_reference_id, :code_reference_id])
+          .join(:LEFT, :plans_pay, [:shop_id], [:plans_id, :plans_id])
+          .join(:LEFT, :shop, [:shop_name], [:shop_id, :shop_id], [:plans_pay])
+          .where_table(:code_reference, :user_id, user_id)
+          .and(:plans_id, "", "", true)
+          .and(:refund_id, "", "", false)
+          .and(:paid_out, "", "", false)
+          .execute_query
+
+        {referrals: referrals}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} Error al obtener la lista de referidos")
+
+        env.response.status_code = 500
+        {message: "Error al obtener los servicios"}.to_json
+      end
+    end
+
+    get "#{url}/user/my_code" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+
+      begin
+        my_code = DB_K
+          .select([:code])
+          .table(:code_reference)
+          .where(:user_id, user_id.to_i)
+          .first
+        {code: my_code.not_nil!["code"]}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} Error al obtener el código de referencia")
+
+        env.response.status_code = 500
+        {message: "Error al obtener el código de referencia"}.to_json
+      end
+    end
+
+    get "#{url}/user/refferals_fail" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+
+      begin
+        reffers_fail = DB_K
+          .select([:refund_id, :money_win, :day_used])
+          .table(:code_used)
+          .join(:LEFT, :code_reference, [:user_id], [:code_reference_id, :code_reference_id])
+          .join(:LEFT, :plans_pay, [:shop_id], [:plans_id, :plans_id])
+          .join(:LEFT, :shop, [:shop_name], [:shop_id, :shop_id], [:plans_pay])
+          .where_table(:code_reference, :user_id, user_id)
+          .and(:plans_id, "", "", false)
+          .and(:refund_id, "", "", true)
+          .and(:paid_out, "", "", false)
+          .execute_query
+
+        {reffers_fail: reffers_fail}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} Error al obtener el código de referencia")
+
+        env.response.status_code = 500
+        {message: "Error al obtener el código de referencia"}.to_json
+      end
+    end
+
+    get "#{url}/user/earned_referrals" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+
+      begin
+        earned_referrals = DB_K
+          .select([:code_reference_id])
+          .table(:code_used)
+          .join(:LEFT, :code_reference, [:user_id], [:code_reference_id, :code_reference_id])
+          .where_table(:code_reference, :user_id, user_id.to_i)
+          .and(:plans_id, "", "", true)
+          .and(:refund_id, "", "", false)
+          .and(:paid_out, "", "", true)
+          .sum(:money_win, :money_win, :code_reference_id, :code_used)
+          .first
+
+        {earned_referrals: earned_referrals}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} Error al obtener cantidad ganada por las referencias")
+
+        env.response.status_code = 500
+        {message: "Error al obtener cantidad ganada por las referencias"}.to_json
+      end
+    end
+
+    get "#{url}/user/earned_referrals_month" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+
+      begin
+        time = Time.now
+        earned_referrals = DB_K
+          .select([:code_reference_id])
+          .table(:code_used)
+          .join(:LEFT, :code_reference, [:user_id], [:code_reference_id, :code_reference_id])
+          .where_beeween(:day_used, ["#{time.year}-#{time.month}-#{1}", "#{time.year}-#{time.month}-#{time.month == 2 ? 28 : 30}"])
+          .and_table(:code_reference, :user_id, user_id.to_i)
+          .and(:plans_id, "", "", true)
+          .and(:refund_id, "", "", false)
+          .and(:paid_out, "", "", false)
+          .sum(:money_win, :money_win, :code_reference_id, :code_used)
+          .first
+
+        {earned_referrals: earned_referrals}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} Error al obtener cantidad ganada por las referencias")
+
+        env.response.status_code = 500
+        {message: "Error al obtener cantidad ganada por las referencias"}.to_json
+      end
+    end
   end
 end
