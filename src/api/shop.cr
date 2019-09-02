@@ -42,6 +42,11 @@ class Shop
             .insert([:shop_name, :address, :phone, :phone2, :description, :cover_image, :accept_card, :list_cards, :lat, :lon, :score_shop, :user_id, :logo, :service_type_id, :sub_service_type_id], shop)
             .execute
 
+          DB_K
+            .table(:pages)
+            .insert([:shop_id], [shop_id_insert])
+            .execute
+
           services = DB_K
             .select([
             :sub_service_name,
@@ -391,10 +396,13 @@ class Shop
         comments = DB_K
           .select([
           :comment,
+          :create_date_at,
         ])
           .table(:shop_comments)
           .join(:LEFT, :usersk, [:user_id, :fullname, :image], [:user_id, :user_id])
           .where(:shop_id, shop_id.to_i)
+          .order_by([:create_date_at])
+          .order_direction
           .execute_query
 
         comments.to_json
@@ -459,6 +467,72 @@ class Shop
 
         env.response.status_code = 500
         {message: "Error al obtener calificacion"}.to_json
+      end
+    end
+
+    get "#{url}/shop/:shop_id/score/:user_id" do |env|
+      shop_id = env.params.url["shop_id"]
+      user_id = env.params.url["user_id"]
+
+      begin
+        score_shop = DB_K
+          .select([
+          :score,
+        ])
+          .table(:shop_score_users)
+          .where(:shop_id, shop_id.to_i)
+          .and(:user_id, user_id.to_i)
+          .first
+
+        score_shop.to_json
+      rescue exception
+        LOGGER.warn("#{exception}")
+
+        env.response.status_code = 500
+
+        {message: "Error al obtener la calificacion dada por el usuario"}.to_json
+      end
+    end
+
+    put "#{url}/shop/:shop_id/score/:user_id" do |env|
+      shop_id = env.params.url["shop_id"]
+      user_id = env.params.url["user_id"]
+      score = env.params.json.has_key?("score") ? "#{env.params.json["score"]}".to_i : nil
+
+      begin
+        if score.not_nil!
+          DB_K
+            .table(:shop_score_users)
+            .update(["score"], [score])
+            .where(:user_id, user_id.to_i)
+            .and(:shop_id, shop_id.to_i)
+            .execute
+
+          score_shop = DB_K
+            .select([
+            :score,
+          ])
+            .table(:shop_score_users)
+            .where(:shop_id, shop_id.to_i)
+            .avg(:score, :score_shop, :shop_id)
+            .execute_query
+
+          DB_K
+            .table(:shop)
+            .update([:score_shop], ["#{score_shop.not_nil![0]["score_shop"]}".to_f.round(1)])
+            .where(:shop_id, shop_id)
+            .execute
+
+          {message: "Calificacion actualizada"}.to_json
+        else
+          raise Exception.new("Score can't be empty")
+        end
+      rescue exception
+        LOGGER.warn("#{exception}")
+
+        env.response.status_code = 500
+
+        {message: "Error al actualizar la calificación"}.to_json
       end
     end
 
@@ -660,6 +734,12 @@ class Shop
           .and(:user_id, user_id)
           .execute
 
+        DB_K
+          .table(:pages)
+          .update(["active"], [0])
+          .where(:shop_id, shop_id)
+          .execute
+
         MONGO.update("shop", {"shop_id" => shop_id}, {"$set" => mongo_update_shop})
         MONGO.update_many("offers", {"shop_id" => shop_id.to_s}, {"$set" => mongo_update_offers})
 
@@ -680,8 +760,6 @@ class Shop
       date_init = env.params.json.has_key?("date_init") ? env.params.json["date_init"].to_s : nil
       date_end = env.params.json.has_key?("date_end") ? env.params.json["date_end"].to_s : nil
       image_url = env.params.json.has_key?("image_url") ? env.params.json["image_url"].to_s : nil
-      lat = validateField("lat", env)
-      lon = validateField("lon", env)
 
       begin
         is_owner = DB_K
@@ -691,12 +769,22 @@ class Shop
           .table(:shop)
           .where(:user_id, user_id.to_i)
           .and(:shop_id, shop_id)
-          .and(:status, 1)
+          .and(:status, true)
           .execute_query
 
         if is_owner.not_nil!.size < 1
           raise Exception.new("Not is owner or active shop")
         end
+
+        position = DB_K
+          .select([
+          :lat,
+          :lon,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .first
 
         offer_id_insert = DB_K
           .table(:offers)
@@ -719,8 +807,8 @@ class Shop
             date_init,
             date_end,
             image_url,
-            lat,
-            lon,
+            position["lat"].not_nil!.to_s,
+            position["lon"].not_nil!.to_s,
           ])
           .execute
 
@@ -730,7 +818,7 @@ class Shop
           "title"    => title,
           "location" => {
             "type"        => "Point",
-            "coordinates" => ["#{env.params.json["lon"]}".to_f, "#{env.params.json["lat"]}".to_f],
+            "coordinates" => ["#{position["lon"]}".to_f, "#{position["lat"]}".to_f],
           },
           "date_init" => date_init,
           "date_end"  => date_end,
@@ -738,7 +826,7 @@ class Shop
         })
 
         env.response.status_code = 200
-        {message: "Created offers", status: 200}.to_json
+        {message: "Created offers", offer_id: offer_id_insert, status: 200}.to_json
       rescue exception
         LOGGER.warn("#{exception} exception to create offer")
 
@@ -788,8 +876,10 @@ class Shop
         end
 
         get_offers.map { |value|
-          values_arr << "#{value["shop_id"]}".to_i
+          values_arr << "#{value["offer_id"]}".to_i
         }
+
+        puts "#{get_offers}"
 
         offers = DB_K
           .select([
@@ -801,7 +891,7 @@ class Shop
         ])
           .table(:offers)
           .join(:LEFT, :shop, [:shop_id, :shop_name, :cover_image], [:shop_id, :shop_id])
-          .where_in(:shop_id, values_arr)
+          .where_in(:offers_id, values_arr)
           .execute_query
 
         order_offers = get_offers.not_nil!.map { |offers_data|
@@ -809,6 +899,7 @@ class Shop
             "#{offers_data["shop_id"]}".to_i == hash_r["shop_id"]
           }
 
+          offers.not_nil!.delete(hash_match)
           hash_match.not_nil!["distance"] = offers_data["distance"]
           hash_match
         }
@@ -833,10 +924,9 @@ class Shop
       title = env.params.json.has_key?("title") ? env.params.json["title"].to_s : nil
       description = env.params.json.has_key?("description") ? env.params.json["description"].to_s : nil
       date_end = env.params.json.has_key?("date_end") ? env.params.json["date_end"].to_s : nil
+      date_init = env.params.json.has_key?("date_init") ? env.params.json["date_init"].to_s : nil
       image_url = env.params.json.has_key?("image_url") ? env.params.json["image_url"].to_s : nil
       active = env.params.json.has_key?("active") ? (env.params.json["active"].to_s).to_i : nil
-      lat = validateField("lat", env)
-      lon = validateField("lon", env)
 
       begin
         is_owner = DB_K
@@ -853,8 +943,18 @@ class Shop
           raise Exception.new("Not is owner or active shop")
         end
 
+        position = DB_K
+          .select([
+          :lat,
+          :lon,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .first
+
         arr_fields = [] of String
-        arr_values = [] of String | Int32 | Float64
+        arr_values = [] of String | Int32 | Float64 | Bool
         mongo_update = {} of String => Hash(String, String | Array(Float64)) | String | Bool
 
         if title
@@ -876,27 +976,35 @@ class Shop
           mongo_update["date_end"] = date_end
         end
 
+        if date_init
+          arr_fields << "date_init"
+          arr_values << date_init
+
+          mongo_update["date_init"] = date_init
+        end
+
         if image_url
           arr_fields << "image_url"
           arr_values << image_url
         end
 
         if active
+          active_value = active === 1 ? true : false
           arr_fields << "active"
-          arr_values << active
+          arr_values << active_value
 
           mongo_update["active"] = active < 1 ? false : true
         end
 
-        if lat && lon
+        if position["lat"] && position["lon"]
           arr_fields << "lat"
-          arr_values << "#{lat}".to_f
+          arr_values << "#{position["lat"].not_nil!}".to_f
           arr_fields << "lon"
-          arr_values << "#{lon}".to_f
+          arr_values << "#{position["lon"].not_nil!}".to_f
 
           mongo_update["location"] = {
             "type"        => "Point",
-            "coordinates" => ["#{lon}".to_f, "#{lat}".to_f],
+            "coordinates" => ["#{position["lon"].not_nil!.to_s}".to_f, "#{position["lat"].not_nil!.to_s}".to_f],
           }
         end
 
@@ -935,6 +1043,7 @@ class Shop
           :offers_id,
           :title,
           :description,
+          :date_init,
           :date_end,
           :image_url,
           :active,
@@ -1008,6 +1117,302 @@ class Shop
         env.response.status_code = 500
 
         {message: "Error al obtener la oferta"}.to_json
+      end
+    end
+
+    put "#{url}/shop/:shop_id/offer/:offer_id/disabled" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      offer_id = env.params.url.has_key?("offer_id") ? env.params.url["offer_id"] : nil
+      shop_id = env.params.url.has_key?("shop_id") ? env.params.url["shop_id"] : nil
+
+      begin
+        is_owner = DB_K
+          .select([
+          :shop_id,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .execute_query
+
+        if is_owner.not_nil!.size < 1
+          raise Exception.new("Not is owner or active shop")
+        end
+
+        DB_K
+          .table(:offers)
+          .update([:active], [false])
+          .where(:offers_id, offer_id)
+          .and(:user_id, user_id)
+          .and(:shop_id, shop_id)
+          .execute
+
+        MONGO.update("offers", {"offer_id" => offer_id.to_s}, {"$set" => {
+                                                                 "active" => false,
+                                                               }})
+
+        env.response.status_code = 200
+        {message: "Success update", status_code: 200}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} Error al desactivar la oferta")
+
+        env.response.status_code = 500
+
+        {message: "Error al desactivar la oferta"}.to_json
+      end
+    end
+
+    get "#{url}/services" do |env|
+      begin
+        services = DB_K
+          .select([
+          :service_type_id,
+          :service_name,
+        ])
+          .table(:service_type)
+          .execute_query
+
+        {services: services.not_nil!}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} Error al obtener los servicios")
+
+        env.response.status_code = 500
+        {message: "Error al obtener los servicios"}
+      end
+    end
+
+    get "#{url}/shop/:shop_id/page" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      shop_id = env.params.url.has_key?("shop_id") ? env.params.url["shop_id"] : nil
+
+      begin
+        is_owner = DB_K
+          .select([
+          :shop_id,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .and(:status, 1)
+          .execute_query
+
+        if is_owner.not_nil!.size < 1
+          raise Exception.new("Not is owner or active shop")
+        end
+
+        page = DB_K
+          .select([
+          :active,
+          :template_type,
+          :style_sheets,
+          :active_days,
+          :images_days,
+          :offers_active,
+          :accept_card_active,
+          :subdomain,
+          :domain,
+          :shop_id,
+        ])
+          .table(:pages)
+          .join(:LEFT, :shop, [:shop_name, :description, :cover_image, :logo], [:shop_id, :shop_id])
+          .where(:shop_id, shop_id)
+          .first
+        {page: page}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} No se pudo obtener la informacion de la pagina")
+
+        env.response.status_code = 403
+        {message: "No se pudo obtener la informacion de la pagina"}
+      end
+    end
+
+    put "#{url}/shop/:shop_id/update_page/:page_id" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      shop_id = env.params.url.has_key?("shop_id") ? env.params.url["shop_id"] : nil
+      page_id = env.params.url.has_key?("page_id") ? env.params.url["page_id"] : nil
+      template_type = env.params.json.has_key?("template_type") ? (env.params.json["template_type"].to_s).to_i : nil
+      style_sheets = env.params.json.has_key?("style_sheets") ? (env.params.json["style_sheets"].to_s).to_i : nil
+      active_days = env.params.json.has_key?("active_days") ? (env.params.json["active_days"].to_s).to_i : nil
+      images_days = env.params.json.has_key?("images_days") ? (env.params.json["images_days"].to_s).to_i : nil
+      offers_active = env.params.json.has_key?("offers_active") ? (env.params.json["offers_active"].to_s).to_i : nil
+      accept_card_active = env.params.json.has_key?("accept_card_active") ? (env.params.json["accept_card_active"].to_s).to_i : nil
+      subdomain = env.params.json.has_key?("subdomain") ? env.params.json["subdomain"].to_s : nil
+      domain = env.params.json.has_key?("domain") ? env.params.json["domain"].to_s : nil
+
+      begin
+        arr_fields = [] of String
+        arr_values = [] of String | Int32 | Float64 | Bool
+
+        is_owner = DB_K
+          .select([
+          :shop_id,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .and(:status, 1)
+          .execute_query
+
+        if is_owner.not_nil!.size < 1
+          raise Exception.new("Not is owner or active shop")
+        end
+
+        if template_type
+          arr_fields << "template_type"
+          arr_values << template_type
+        end
+
+        if style_sheets
+          arr_fields << "style_sheets"
+          arr_values << style_sheets
+        end
+
+        if active_days
+          arr_fields << "active_days"
+          arr_values << active_days
+        end
+
+        if images_days
+          arr_fields << "images_days"
+          arr_values << images_days
+        end
+
+        if offers_active
+          arr_fields << "offers_active"
+          arr_values << offers_active
+        end
+
+        if accept_card_active
+          arr_fields << "accept_card_active"
+          arr_values << accept_card_active
+        end
+
+        if subdomain
+          exist_subdomain = DB_K
+            .select([
+            :subdomain,
+            :shop_id,
+          ])
+            .table(:pages)
+            .where(:subdomain, subdomain)
+            .first
+
+          if exist_subdomain.empty?
+            arr_fields << "subdomain"
+            arr_values << subdomain
+          elsif exist_subdomain["shop_id"] === shop_id
+            arr_fields << "subdomain"
+            arr_values << subdomain
+          end
+        end
+
+        if domain
+          exist_domain = DB_K
+            .select([
+            :subdomain,
+            :shop_id,
+          ])
+            .table(:pages)
+            .where(:subdomain, subdomain)
+            .first
+
+          if exist_domain.empty?
+            arr_fields << "domain"
+            arr_values << domain
+          elsif exist_domain["shop_id"] === shop_id
+            arr_fields << "domain"
+            arr_values << domain
+          end
+        end
+
+        DB_K
+          .table(:pages)
+          .update(arr_fields, arr_values)
+          .where(:pages_id, page_id)
+          .execute
+
+        {success: "Actualizado"}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} No se pudo actualizar la informacion de la pagina")
+
+        env.response.status_code = 403
+        {message: "No se pudo actualizar la informacion de la pagina"}
+      end
+    end
+
+    put "#{url}/shop/:shop_id/active_page/:page_id" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      shop_id = env.params.url.has_key?("shop_id") ? env.params.url["shop_id"] : nil
+      page_id = env.params.url.has_key?("page_id") ? env.params.url["page_id"] : nil
+
+      begin
+        arr_fields = [] of String
+        arr_values = [] of String | Int32 | Float64 | Bool
+
+        is_owner = DB_K
+          .select([
+          :shop_id,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .and(:status, 1)
+          .execute_query
+
+        if is_owner.not_nil!.size < 1
+          raise Exception.new("Not is owner or active shop")
+        end
+
+        DB_K
+          .table(:pages)
+          .update([:active], [true])
+          .where(:pages_id, page_id)
+          .execute
+
+        {success: "Actualizado"}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} No se pudo actualizar la informacion de la pagina")
+
+        env.response.status_code = 403
+        {message: "No se pudo actualizar la informacion de la pagina"}
+      end
+    end
+
+    put "#{url}/shop/:shop_id/deactivate_page/:page_id" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      shop_id = env.params.url.has_key?("shop_id") ? env.params.url["shop_id"] : nil
+      page_id = env.params.url.has_key?("page_id") ? env.params.url["page_id"] : nil
+
+      begin
+        arr_fields = [] of String
+        arr_values = [] of String | Int32 | Float64 | Bool
+
+        is_owner = DB_K
+          .select([
+          :shop_id,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .and(:status, 1)
+          .execute_query
+
+        if is_owner.not_nil!.size < 1
+          raise Exception.new("Not is owner or active shop")
+        end
+
+        DB_K
+          .table(:pages)
+          .update([:active], [false])
+          .where(:pages_id, page_id)
+          .execute
+
+        {success: "Actualizado"}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} No se pudo actualizar la informacion de la pagina")
+
+        env.response.status_code = 403
+        {message: "No se pudo actualizar la informacion de la pagina"}
       end
     end
   end

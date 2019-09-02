@@ -16,7 +16,6 @@ class Images
         result_cover = CLOUDINARY.upload(upload, "shop_images")
         response_result = JSON.parse(result_cover)
       end
-
       {result: response_result["url"]}.to_json
     end
 
