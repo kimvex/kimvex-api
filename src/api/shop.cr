@@ -1180,6 +1180,241 @@ class Shop
         {message: "Error al obtener los servicios"}
       end
     end
+
+    get "#{url}/shop/:shop_id/page" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      shop_id = env.params.url.has_key?("shop_id") ? env.params.url["shop_id"] : nil
+
+      begin
+        is_owner = DB_K
+          .select([
+          :shop_id,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .and(:status, 1)
+          .execute_query
+
+        if is_owner.not_nil!.size < 1
+          raise Exception.new("Not is owner or active shop")
+        end
+
+        page = DB_K
+          .select([
+          :active,
+          :template_type,
+          :style_sheets,
+          :active_days,
+          :images_days,
+          :offers_active,
+          :accept_card_active,
+          :subdomain,
+          :domain,
+          :shop_id,
+        ])
+          .table(:pages)
+          .join(:LEFT, :shop, [:shop_name, :description, :cover_image, :logo], [:shop_id, :shop_id])
+          .where(:shop_id, shop_id)
+          .first
+        {page: page}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} No se pudo obtener la informacion de la pagina")
+
+        env.response.status_code = 403
+        {message: "No se pudo obtener la informacion de la pagina"}
+      end
+    end
+
+    put "#{url}/shop/:shop_id/update_page/:page_id" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      shop_id = env.params.url.has_key?("shop_id") ? env.params.url["shop_id"] : nil
+      page_id = env.params.url.has_key?("page_id") ? env.params.url["page_id"] : nil
+      template_type = env.params.json.has_key?("template_type") ? (env.params.json["template_type"].to_s).to_i : nil
+      style_sheets = env.params.json.has_key?("style_sheets") ? (env.params.json["style_sheets"].to_s).to_i : nil
+      active_days = env.params.json.has_key?("active_days") ? (env.params.json["active_days"].to_s).to_i : nil
+      images_days = env.params.json.has_key?("images_days") ? (env.params.json["images_days"].to_s).to_i : nil
+      offers_active = env.params.json.has_key?("offers_active") ? (env.params.json["offers_active"].to_s).to_i : nil
+      accept_card_active = env.params.json.has_key?("accept_card_active") ? (env.params.json["accept_card_active"].to_s).to_i : nil
+      subdomain = env.params.json.has_key?("subdomain") ? env.params.json["subdomain"].to_s : nil
+      domain = env.params.json.has_key?("domain") ? env.params.json["domain"].to_s : nil
+
+      begin
+        arr_fields = [] of String
+        arr_values = [] of String | Int32 | Float64 | Bool
+
+        is_owner = DB_K
+          .select([
+          :shop_id,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .and(:status, 1)
+          .execute_query
+
+        if is_owner.not_nil!.size < 1
+          raise Exception.new("Not is owner or active shop")
+        end
+
+        if template_type
+          arr_fields << "template_type"
+          arr_values << template_type
+        end
+
+        if style_sheets
+          arr_fields << "style_sheets"
+          arr_values << style_sheets
+        end
+
+        if active_days
+          arr_fields << "active_days"
+          arr_values << active_days
+        end
+
+        if images_days
+          arr_fields << "images_days"
+          arr_values << images_days
+        end
+
+        if offers_active
+          arr_fields << "offers_active"
+          arr_values << offers_active
+        end
+
+        if accept_card_active
+          arr_fields << "accept_card_active"
+          arr_values << accept_card_active
+        end
+
+        if subdomain
+          exist_subdomain = DB_K
+            .select([
+            :subdomain,
+            :shop_id,
+          ])
+            .table(:pages)
+            .where(:subdomain, subdomain)
+            .first
+
+          if exist_subdomain.empty?
+            arr_fields << "subdomain"
+            arr_values << subdomain
+          elsif exist_subdomain["shop_id"] === shop_id
+            arr_fields << "subdomain"
+            arr_values << subdomain
+          end
+        end
+
+        if domain
+          exist_domain = DB_K
+            .select([
+            :subdomain,
+            :shop_id,
+          ])
+            .table(:pages)
+            .where(:subdomain, subdomain)
+            .first
+
+          if exist_domain.empty?
+            arr_fields << "domain"
+            arr_values << domain
+          elsif exist_domain["shop_id"] === shop_id
+            arr_fields << "domain"
+            arr_values << domain
+          end
+        end
+
+        DB_K
+          .table(:pages)
+          .update(arr_fields, arr_values)
+          .where(:pages_id, page_id)
+          .execute
+
+        {success: "Actualizado"}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} No se pudo actualizar la informacion de la pagina")
+
+        env.response.status_code = 403
+        {message: "No se pudo actualizar la informacion de la pagina"}
+      end
+    end
+
+    put "#{url}/shop/:shop_id/active_page/:page_id" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      shop_id = env.params.url.has_key?("shop_id") ? env.params.url["shop_id"] : nil
+      page_id = env.params.url.has_key?("page_id") ? env.params.url["page_id"] : nil
+
+      begin
+        arr_fields = [] of String
+        arr_values = [] of String | Int32 | Float64 | Bool
+
+        is_owner = DB_K
+          .select([
+          :shop_id,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .and(:status, 1)
+          .execute_query
+
+        if is_owner.not_nil!.size < 1
+          raise Exception.new("Not is owner or active shop")
+        end
+
+        DB_K
+          .table(:pages)
+          .update([:active], [true])
+          .where(:pages_id, page_id)
+          .execute
+
+        {success: "Actualizado"}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} No se pudo actualizar la informacion de la pagina")
+
+        env.response.status_code = 403
+        {message: "No se pudo actualizar la informacion de la pagina"}
+      end
+    end
+
+    put "#{url}/shop/:shop_id/deactivate_page/:page_id" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      shop_id = env.params.url.has_key?("shop_id") ? env.params.url["shop_id"] : nil
+      page_id = env.params.url.has_key?("page_id") ? env.params.url["page_id"] : nil
+
+      begin
+        arr_fields = [] of String
+        arr_values = [] of String | Int32 | Float64 | Bool
+
+        is_owner = DB_K
+          .select([
+          :shop_id,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .and(:status, 1)
+          .execute_query
+
+        if is_owner.not_nil!.size < 1
+          raise Exception.new("Not is owner or active shop")
+        end
+
+        DB_K
+          .table(:pages)
+          .update([:active], [false])
+          .where(:pages_id, page_id)
+          .execute
+
+        {success: "Actualizado"}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} No se pudo actualizar la informacion de la pagina")
+
+        env.response.status_code = 403
+        {message: "No se pudo actualizar la informacion de la pagina"}
+      end
+    end
   end
 
   def self.validateField(field, env)

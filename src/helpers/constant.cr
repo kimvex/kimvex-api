@@ -39,6 +39,10 @@ ONLY_ROUTES = [
   "/api/user/earned_referrals",
   "/api/user/earned_referrals_month",
   "/api/code/auth",
+  "/api/shop/:shop_id/page",
+  "/api/shop/:shop_id/update_page/:page_id",
+  "/api/shop/:shop_id/active_page/:page_id",
+  "/api/shop/:shop_id/deactivate_page/:page_id",
 ]
 
 OPTIONS_HTTP_ALLOW = [
@@ -79,4 +83,8 @@ OPTIONS_HTTP_ALLOW = [
   "/api/user/earned_referrals",
   "/api/user/earned_referrals_month",
   "/api/code/auth",
+  "/api/shop/:shop_id/page",
+  "/api/shop/:shop_id/update_page/:page_id",
+  "/api/shop/:shop_id/active_page/:page_id",
+  "/api/shop/:shop_id/deactivate_page/:page_id",
 ]
