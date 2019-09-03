@@ -43,6 +43,8 @@ ONLY_ROUTES = [
   "/api/shop/:shop_id/update_page/:page_id",
   "/api/shop/:shop_id/active_page/:page_id",
   "/api/shop/:shop_id/deactivate_page/:page_id",
+  "/api/shop/:shop_id/validate_subdomain",
+  "/api/shop/:shop_id/validate_domain",
 ]
 
 OPTIONS_HTTP_ALLOW = [
@@ -87,4 +89,6 @@ OPTIONS_HTTP_ALLOW = [
   "/api/shop/:shop_id/update_page/:page_id",
   "/api/shop/:shop_id/active_page/:page_id",
   "/api/shop/:shop_id/deactivate_page/:page_id",
+  "/api/shop/:shop_id/validate_subdomain",
+  "/api/shop/:shop_id/validate_domain",
 ]
