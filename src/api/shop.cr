@@ -1415,6 +1415,66 @@ class Shop
         {message: "No se pudo actualizar la informacion de la pagina"}
       end
     end
+
+    get "#{url}/shop/:shop_id/validate_subdomain" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      subdomain = env.params.query.has_key?("subdomain") ? env.params.query["subdomain"] : nil
+      shop_id = env.params.url.has_key?("shop_id") ? env.params.url["shop_id"] : nil
+
+      begin
+        exist_subdomain = DB_K
+          .select([
+          :subdomain,
+          :shop_id,
+        ])
+          .table(:pages)
+          .where(:subdomain, subdomain)
+          .first
+
+        if exist_subdomain.empty?
+          {subdomain: false}.to_json
+        elsif exist_subdomain["shop_id"] === shop_id.not_nil!.to_i
+          {subdomain: false}.to_json
+        else
+          {subdomain: true}.to_json
+        end
+      rescue exception
+        LOGGER.warn("#{exception} No se pudo validar el subdomain")
+
+        env.response.status_code = 403
+        {message: "No se pudo validar el subdomain"}
+      end
+    end
+
+    get "#{url}/shop/:shop_id/validate_domain" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      domain = env.params.query.has_key?("domain") ? env.params.query["domain"] : nil
+      shop_id = env.params.url.has_key?("shop_id") ? env.params.url["shop_id"] : nil
+
+      begin
+        exist_domain = DB_K
+          .select([
+          :domain,
+          :shop_id,
+        ])
+          .table(:pages)
+          .where(:domain, domain)
+          .first
+
+        if exist_domain.empty?
+          {domain: false}.to_json
+        elsif exist_domain["shop_id"] === shop_id.not_nil!.to_i
+          {domain: false}.to_json
+        else
+          {domain: true}.to_json
+        end
+      rescue exception
+        LOGGER.warn("#{exception} No se pudo validar el domain")
+
+        env.response.status_code = 403
+        {message: "No se pudo validar el subdomain"}
+      end
+    end
   end
 
   def self.validateField(field, env)
