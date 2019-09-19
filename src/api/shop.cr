@@ -1212,6 +1212,7 @@ class Shop
           :subdomain,
           :domain,
           :shop_id,
+          :pages_id,
         ])
           .table(:pages)
           .join(:LEFT, :shop, [:shop_name, :description, :cover_image, :logo], [:shop_id, :shop_id])
