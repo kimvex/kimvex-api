@@ -161,6 +161,11 @@ class Database
     self
   end
 
+  def offset(offset = 0)
+    @query = "#{@query} OFFSET #{offset}"
+    self
+  end
+
   def order_direction(order = "DESC")
     @query = "#{@query} #{order}"
     self
@@ -286,7 +291,7 @@ class Database
     if query.to_s != "[]"
       query.not_nil![0]
     else
-      puts "User not found"
+      # puts "User not found"
       hash_result_empty = {} of String => JSON::Any
       hash_result_empty
     end
