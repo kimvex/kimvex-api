@@ -154,7 +154,7 @@ class Shop
       description = env.params.json.has_key?("description") ? env.params.json["description"] : nil
       cover_image = env.params.json.has_key?("cover_image") ? env.params.json["cover_image"] : nil
       logo = env.params.json.has_key?("logo") ? env.params.json["logo"] : nil
-      accept_card = validateField("accept_card", env)
+      accept_card = env.params.json.has_key?("accept_card") ? env.params.json["accept_card"] === true ? 1 : 0 : nil
       shop_schedules = env.params.json.has_key?("shop_schedules") ? env.params.json["shop_schedules"].not_nil!.as(Array) : nil
       list_cards = env.params.json.has_key?("list_cards") ? env.params.json["list_cards"] : nil
       service_type = env.params.json.has_key?("service_type") ? env.params.json["service_type"] : nil
@@ -287,6 +287,11 @@ class Shop
 
     get "#{url}/profile/shops" do |env|
       user_id = Authentication.current_session(env.request.headers["token"])
+      limit = env.params.query.has_key?("limit") ? env.params.query["limit"].to_i : 10
+      page = env.params.query.has_key?("page") ? env.params.query["page"].to_i : 0
+
+      # pagination
+      offset = limit * page
 
       begin
         shop_result = DB_K
@@ -310,17 +315,21 @@ class Shop
           .join(:LEFT, :service_type, [:service_name], [:service_type_id, :service_type_id])
           .join(:LEFT, :sub_service_type, [:sub_service_name], [:sub_service_type_id, :sub_service_type_id])
           .join(:LEFT, :shop_schedules, [:LUN, :MAR, :MIE, :JUE, :VIE, :SAB, :DOM], [:shop_id, :shop_id])
-          .join(:LEFT, :plans_pay, [:date_init, :date_finish], [:shop_id, :shop_id])
+          .join(:LEFT, :plans_pay, [:date_init, :date_finish, :type_charge], [:shop_id, :shop_id])
           .join(:LEFT, :usersk, [:user_id], [:user_id, :user_id])
           .where(:user_id, user_id.to_i)
           .group_concat([:url_image, :images_shop, :url], :image_id, :images)
+          .order_by([:create_at_shop])
+          .order_direction
+          .limit(limit)
+          .offset(offset)
           .execute_query
 
         {result: shop_result}.to_json
       rescue exception
         LOGGER.warn("#{exception}")
         env.response.status_code = 500
-        {message: "Error al obtener las propiedades"}.to_json
+        {message: "Error al obtener las tiendas"}.to_json
       end
     end
 
@@ -391,6 +400,10 @@ class Shop
 
     get "#{url}/shop/:shop_id/comments" do |env|
       shop_id = env.params.url["shop_id"]
+      limit = env.params.query.has_key?("limit") ? env.params.query["limit"].to_i : 10
+      page = env.params.query.has_key?("page") ? env.params.query["page"].to_i : 0
+
+      offset = limit * page
 
       begin
         comments = DB_K
@@ -403,13 +416,15 @@ class Shop
           .where(:shop_id, shop_id.to_i)
           .order_by([:create_date_at])
           .order_direction
+          .limit(limit)
+          .offset(offset)
           .execute_query
 
         comments.to_json
       rescue exception
         LOGGER.warn("#{exception}")
 
-        {message: "Error al obtener los comentarios"}.to_json
+        {message: "Error al obtener los comentarios."}.to_json
       end
     end
 
@@ -647,7 +662,7 @@ class Shop
 
         result_properties = [] of JSON::Any
         values_arr = [] of Int32
-
+        puts get_shops
         if get_shops.empty?
           env.response.status_code = 200
           next get_shops.to_json
@@ -837,9 +852,9 @@ class Shop
 
     get "#{url}/shops/offers/:lat/:lon" do |env|
       limit = env.params.query.has_key?("limit") ? env.params.query["limit"].to_i : 10
-      last_offer = env.params.query.has_key?("last_offer_id") ? env.params.query["last_offer_id"] : 0
+      last_offers = env.params.query.has_key?("last_offer_id") ? env.params.query["last_offer_id"] : "0"
       minDistance = env.params.query.has_key?("minDistance") ? env.params.query["minDistance"].to_f : 0.0
-
+      last_offers_array = last_offers.split(",")
       begin
         time = Time.now Time::Location.load("America/Mexico_City")
         time_paser = "#{time}".split(" ").first
@@ -859,7 +874,7 @@ class Shop
           {
             "$match" => {
               "active"   => true,
-              "offer_id" => {"$nin" => [last_offer]},
+              "offer_id" => {"$nin" => last_offers_array},
               "date_end" => {"$gt" => time_paser},
             },
           },
@@ -876,6 +891,7 @@ class Shop
         end
 
         get_offers.map { |value|
+          puts "#{value} #{typeof(value)}"
           values_arr << "#{value["offer_id"]}".to_i
         }
 
@@ -888,6 +904,7 @@ class Shop
           :date_init,
           :date_end,
           :image_url,
+          :offers_id,
         ])
           .table(:offers)
           .join(:LEFT, :shop, [:shop_id, :shop_name, :cover_image], [:shop_id, :shop_id])
@@ -896,18 +913,21 @@ class Shop
 
         order_offers = get_offers.not_nil!.map { |offers_data|
           hash_match = offers.not_nil!.find { |hash_r|
-            "#{offers_data["shop_id"]}".to_i == hash_r["shop_id"]
+            "#{offers_data["offer_id"]}".to_i == hash_r["offers_id"]
           }
+
+          puts "#{offers_data["offer_id"]}-#{offers_data["shop_id"]}-#{hash_match}"
 
           offers.not_nil!.delete(hash_match)
           hash_match.not_nil!["distance"] = offers_data["distance"]
+          hash_match.not_nil!["offer_id"] = offers_data["offer_id"]
           hash_match
         }
 
         env.response.status_code = 200
         {
           offers:        order_offers,
-          last_offer_id: order_offers.last.not_nil!["shop_id"],
+          last_offer_id: order_offers.not_nil!.map { |offer| offer.not_nil!["offer_id"] },
           last_distance: order_offers.last.not_nil!["distance"],
         }.to_json
       rescue exception
@@ -1030,8 +1050,10 @@ class Shop
     get "#{url}/shop/:shop_id/offers" do |env|
       shop_id = env.params.url["shop_id"]
       status = env.params.query.has_key?("status") ? env.params.query["status"] : nil
-      limit = env.params.query.has_key?("limit") ? env.params.query["limit"] : 10
-      last_id = env.params.query.has_key?("last_id") ? env.params.query["last_id"] : 0
+      limit = env.params.query.has_key?("limit") ? env.params.query["limit"].to_i : 10
+      page = env.params.query.has_key?("page") ? env.params.query["page"].to_i : 0
+
+      offset = limit * page
 
       begin
         if shop_id.nil?
@@ -1052,6 +1074,8 @@ class Shop
         ])
           .table(:offers)
           .where(:shop_id, shop_id.to_i)
+          .order_by([:create_at_offer])
+          .order_direction
 
         case status
         when "actives"
@@ -1061,20 +1085,13 @@ class Shop
         end
 
         offers = offers
-          .and(:offers_id, last_id.to_i, ">=")
           .limit(limit)
+          .offset(offset)
           .execute_query
-
-        last_id_result = 0
-
-        if !offers.not_nil!.empty?
-          last_id_result = offers.not_nil!.last["offers_id"]
-        end
 
         env.response.status_code = 200
         {
-          offers:  offers,
-          last_id: last_id_result,
+          offers: offers,
         }.to_json
       rescue exception
         LOGGER.warn("#{exception} Error al obtener las ofertas de una tienda")
@@ -1215,6 +1232,7 @@ class Shop
           :pages_id,
         ])
           .table(:pages)
+          .join(:LEFT, :plans_pay, [:type_charge], [:shop_id, :shop_id])
           .join(:LEFT, :shop, [:shop_name, :description, :cover_image, :logo], [:shop_id, :shop_id])
           .where(:shop_id, shop_id)
           .first
@@ -1301,9 +1319,11 @@ class Shop
           if exist_subdomain.empty?
             arr_fields << "subdomain"
             arr_values << subdomain
-          elsif exist_subdomain["shop_id"] === shop_id
+          elsif exist_subdomain["shop_id"] == shop_id.not_nil!.to_i64
             arr_fields << "subdomain"
             arr_values << subdomain
+          else
+            raise Exception.new("Subdomain is used for other shop")
           end
         end
 
@@ -1320,7 +1340,7 @@ class Shop
           if exist_domain.empty?
             arr_fields << "domain"
             arr_values << domain
-          elsif exist_domain["shop_id"] === shop_id
+          elsif exist_domain["shop_id"] === shop_id.not_nil!.to_i64
             arr_fields << "domain"
             arr_values << domain
           end
