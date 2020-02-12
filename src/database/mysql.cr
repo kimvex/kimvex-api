@@ -46,8 +46,12 @@ class Database
   end
 
   def delete(field = "")
+    puts "#{@query} -a o que haty"
+    @query = ""
     @query = "DELETE"
     @action_sql = "DELETE"
+    @values_insert_update.clear
+
     self
   end
 
@@ -189,14 +193,22 @@ class Database
     self
   end
 
-  def group_concat(args = [] of DB::Any, order_by = "", alias_as = "")
+  def group_concat(args = [] of DB::Any, order_by = "", alias_as = "", array = false)
     field, table, alias_field = args
     query = @query
 
     if @query.includes?("JOIN")
-      @query = @query.gsub("#{table}.#{field}", "concat('[',GROUP_CONCAT(json_object('#{alias_field}',#{table}.#{field})),']') AS #{alias_as}")
+      if array
+        @query = @query.gsub("#{table}.#{field}", "json_array(GROUP_CONCAT(coalesce(#{table}.#{field}, ''))) AS #{alias_as}")
+      else
+        @query = @query.gsub("#{table}.#{field}", "concat('[',GROUP_CONCAT(json_object('#{alias_field}',#{table}.#{field})),']') AS #{alias_as}")
+      end
     else
-      @query = @query.gsub("#{field}", "concat('[',GROUP_CONCAT(json_object('#{alias_field}',#{field})),']') AS #{alias_as}")
+      if array
+        @query = @query.gsub("#{field}", "json_array(GROUP_CONCAT(#{field})) AS #{alias_as}")
+      else
+        @query = @query.gsub("#{field}", "concat('[',GROUP_CONCAT(json_object('#{alias_field}',#{field})),']') AS #{alias_as}")
+      end
     end
 
     group_by(query)
@@ -319,7 +331,7 @@ class Database
     rescue exception
       error = "#{exception} execute_query"
       self.clear
-      raise Exception.new("#{exception}")
+      raise Exception.new("#{exception} - mysql")
       puts error
     end
   end
@@ -333,18 +345,19 @@ class Database
         puts "Insert success"
         last_result = result.last_insert_id
       when "UPDATE"
-        puts "#{@query}"
-        @db.exec("#{@query}", @values_insert_update)
+        result = @db.exec("#{@query}", @values_insert_update)
         puts "Update success"
+        result
       when "DELETE"
-        puts "#{@query}"
-        @db.exec("#{@query}", @values_insert_update)
+        puts "#{@query} es lo que sigue"
+        result = @db.exec("#{@query}", @values_insert_update)
         puts "Delete success"
+        result
       end
+      puts "#{@values_insert_update} - clean db ::"
       self.clear
     rescue exception
       error = "#{exception}"
-
       self.clear
 
       if error.includes?("Duplicate entry")
@@ -360,10 +373,12 @@ class Database
     json_data = JSON.build do |json|
       json.object do
         column_names.each do |field_s|
-          json.field "#{field_s}", "#{rs.read(DB::Any | Int8)}"
+          json.field "#{field_s}", "#{rs.read(DB::Any | Int8 | JSON::Any)}"
         end
       end
     end
+
+    puts "paso hasta aqui"
 
     convert_to_hash = Hash(String, JSON::Any).from_json(json_data)
     convert_to_hash.each do |key, value|
@@ -397,7 +412,15 @@ class Database
     self
   end
 
-  private def clear
+  private def clear(lugar = "")
+    @values_insert_update.clear
+    @query = ""
+    @table = ""
+    @action_sql = ""
+    @select_concat = ""
+  end
+
+  def clean
     @values_insert_update.clear
     @query = ""
     @table = ""

@@ -132,8 +132,15 @@ class Shop
           .join(:LEFT, :shop_schedules, [:LUN, :MAR, :MIE, :JUE, :VIE, :SAB, :DOM], [:shop_id, :shop_id])
           .join(:LEFT, :usersk, [:user_id], [:user_id, :user_id])
           .where(:shop_id, shop_id)
-          .group_concat([:url_image, :images_shop, :url], :image_id, :images)
+          .group_concat([:url_image, :images_shop, :url], :image_id, :images, true)
           .first
+
+        puts shop_result
+        puts typeof(shop_result["images"])
+
+        if typeof(shop_result["images"]) != String
+          shop_result["images"] = JSON.parse("#{shop_result["images"][0].not_nil!}".split(",").reject { |im| im.to_s.empty? }.to_s)
+        end
 
         shop_result.to_json
       rescue exception
@@ -290,11 +297,11 @@ class Shop
       limit = env.params.query.has_key?("limit") ? env.params.query["limit"].to_i : 10
       page = env.params.query.has_key?("page") ? env.params.query["page"].to_i : 0
 
-      # pagination
+      # paginations
       offset = limit * page
 
       begin
-        shop_result = DB_K
+        shop_result_ = DB_K
           .select([
           :shop_id,
           :shop_name,
@@ -309,6 +316,8 @@ class Shop
           :lon,
           :score_shop,
           :status,
+          :lock_shop,
+          :canceled,
         ])
           .table(:shop)
           .join(:LEFT, :images_shop, [:url_image], [:shop_id, :shop_id])
@@ -325,7 +334,7 @@ class Shop
           .offset(offset)
           .execute_query
 
-        {result: shop_result}.to_json
+        {result: shop_result_}.to_json
       rescue exception
         LOGGER.warn("#{exception}")
         env.response.status_code = 500
@@ -362,13 +371,14 @@ class Shop
       url_image = env.params.json.has_key?("url_image") ? env.params.json["url_image"] : nil
 
       begin
+        puts "#{url_image} las urls #{shop_id} y los parametros"
+
         DB_K
           .delete
           .table(:images_shop)
           .where(:url_image, url_image.to_s)
           .and(:shop_id, shop_id)
           .execute
-
         {message: "Imagen eliminada"}.to_json
       rescue exception
         LOGGER.warn("#{exception}")
@@ -737,7 +747,7 @@ class Shop
 
         DB_K
           .table(:shop)
-          .update(["status"], [0])
+          .update(["status", "lock_shop"], [0, 1])
           .where(:user_id, user_id)
           .and(:shop_id, shop_id)
           .execute
@@ -764,6 +774,64 @@ class Shop
 
         env.response.status_code = 500
         {message: "Error al desactivar tienda"}.to_json
+      end
+    end
+
+    put "#{url}/shop/unlock/:shop_id" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
+      shop_id = env.params.url["shop_id"]
+
+      mongo_update_shop = {} of String => Bool
+      mongo_update_offers = {} of String => Bool
+
+      begin
+        is_owner = DB_K
+          .select([
+          :shop_id,
+        ])
+          .table(:shop)
+          .where(:user_id, user_id.to_i)
+          .and(:shop_id, shop_id)
+          .and(:status, 0)
+          .and(:lock_shop, 1)
+          .execute_query
+
+        if is_owner.not_nil!.size < 1
+          raise Exception.new("Not is owner or active shop")
+        end
+
+        mongo_update_shop["status"] = true
+        mongo_update_offers["active"] = true
+
+        DB_K
+          .table(:shop)
+          .update(["status", "lock_shop"], [1, 0])
+          .where(:user_id, user_id)
+          .and(:shop_id, shop_id)
+          .execute
+
+        DB_K
+          .table(:offers)
+          .update(["active"], [1])
+          .where(:shop_id, shop_id)
+          .and(:user_id, user_id)
+          .execute
+
+        DB_K
+          .table(:pages)
+          .update(["active"], [1])
+          .where(:shop_id, shop_id)
+          .execute
+
+        MONGO.update("shop", {"shop_id" => shop_id}, {"$set" => mongo_update_shop})
+        MONGO.update_many("offers", {"shop_id" => shop_id.to_s}, {"$set" => mongo_update_offers})
+
+        {message: "Tienda habilitada"}.to_json
+      rescue exception
+        LOGGER.warn("#{exception} Error al desabilitar una tienda")
+
+        env.response.status_code = 500
+        {message: "Error al reactivar tienda"}.to_json
       end
     end
 
@@ -1195,6 +1263,28 @@ class Shop
 
         env.response.status_code = 500
         {message: "Error al obtener los servicios"}
+      end
+    end
+
+    get "#{url}/sub_service/:service_id" do |env|
+      service_id = env.params.url.has_key?("service_id") ? env.params.url["service_id"].to_i : nil
+
+      begin
+        sub_service = DB_K
+          .select([
+          :sub_service_type_id,
+          :sub_service_name,
+        ])
+          .table(:sub_service_type)
+          .where(:service_type_id, service_id)
+          .execute_query
+
+        {sub_service: sub_service.not_nil!}.to_json
+      rescue exception
+        LOGGER.warn("#{exception}  Error al obtener los sub servicios")
+
+        env.response.status_code = 500
+        {message: "Error al obtener los sub servicios"}
       end
     end
 
