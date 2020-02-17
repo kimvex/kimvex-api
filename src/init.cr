@@ -13,8 +13,7 @@ require "./helpers/validations.cr"
 require "./helpers/cloudinary.cr"
 require "./helpers/logger"
 
-LOGGER = LoggerK.new
-
+LOGGER     = LoggerK.new
 DB_K       = Database.new
 REDIS      = RedisDatabase.connect
 CLOUDINARY = Cloudinary.new("766496458317643", "h27hacklab")

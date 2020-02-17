@@ -30,6 +30,7 @@ ONLY_ROUTES = [
   "/api/images/shop",
   "/api/shop/:shop_id/update",
   "/api/shop/lock/:shop_id",
+  "/api/shop/unlock/:shop_id",
   "/api/shop/:shop_id/score",
   "/api/shop/:shop_id/score/:user_id",
   "/api/shop/:shop_id/offer/:offer_id/disabled",
@@ -73,6 +74,7 @@ OPTIONS_HTTP_ALLOW = [
   "/api/images/shop/cover",
   "/api/images/shop",
   "/api/shop/lock/:shop_id",
+  "/api/shop/unlock/:shop_id",
   "/api/profile/shops",
   "/api/list/shops/:lat/:lon",
   "/api/services",
@@ -91,4 +93,6 @@ OPTIONS_HTTP_ALLOW = [
   "/api/shop/:shop_id/deactivate_page/:page_id",
   "/api/shop/:shop_id/validate_subdomain",
   "/api/shop/:shop_id/validate_domain",
+  "/api/sub_service/:service_id",
 ]
+# lock
