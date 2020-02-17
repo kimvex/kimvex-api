@@ -263,6 +263,7 @@ class Users
     end
 
     get "#{url}/code/auth" do |env|
+      user_id = Authentication.current_session(env.request.headers["token"])
       reffer_code = env.params.query.has_key?("reffer_code") ? env.params.query["reffer_code"] : nil
 
       begin
@@ -274,6 +275,7 @@ class Users
         ])
           .table(:code_reference)
           .where(:code, reffer_code.not_nil!)
+          .and(:user_id, user_id, "<>")
           .first
 
         {validate: exist_code}.to_json
