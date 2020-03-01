@@ -6,13 +6,13 @@ class Token
     Time::Location.load("America/Mexico_City")
     payload = {
       :password => password,
-      :time     => Time.new,
+      :time     => Time.local,
     }
-    JWT.encode(payload, "serviciosK", "HS256")
+    JWT.encode(payload, "serviciosK", JWT::Algorithm::HS256)
   end
 
   def self.decodeToken(token)
-    payload = JWT.decode(token, "serviciosK", "HS256")
+    payload = JWT.decode(token, "serviciosK", JWT::Algorithm::HS256)
     payload["password"]
   end
 
@@ -22,7 +22,9 @@ class Token
     key
   end
 
-  def self.verifyPassword(password)
-    Crypto::Bcrypt::Password.new(password.to_s)
+  def self.verifyPassword(password, passwordVerification)
+    pass = Crypto::Bcrypt::Password.new(password.to_s)
+
+    pass.verify(passwordVerification.to_s)
   end
 end

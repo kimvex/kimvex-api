@@ -341,16 +341,16 @@ class Database
     begin
       case @action_sql
       when "INSERT"
-        result = @db.exec "#{@query}", @values_insert_update
+        result = @db.exec "#{@query}", args: @values_insert_update
         puts "Insert success"
         last_result = result.last_insert_id
       when "UPDATE"
-        result = @db.exec("#{@query}", @values_insert_update)
+        result = @db.exec("#{@query}", args: @values_insert_update)
         puts "Update success"
         result
       when "DELETE"
         puts "#{@query} es lo que sigue"
-        result = @db.exec("#{@query}", @values_insert_update)
+        result = @db.exec("#{@query}", args: @values_insert_update)
         puts "Delete success"
         result
       end
@@ -377,8 +377,6 @@ class Database
         end
       end
     end
-
-    puts "paso hasta aqui"
 
     convert_to_hash = Hash(String, JSON::Any).from_json(json_data)
     convert_to_hash.each do |key, value|

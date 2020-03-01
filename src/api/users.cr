@@ -16,7 +16,7 @@ class Users
           if user.empty?
             env.response.status_code = 404
             {message: "El usuario no existe ó no esta verificado", status: 404}.to_json
-          elsif user && Token.verifyPassword(user["password"]) == password
+          elsif user && Token.verifyPassword(user["password"], password)
             token = Token.generateToken(password)
             REDIS.set(token, user["user_id"])
             {token: token.to_s}.to_json
@@ -166,7 +166,7 @@ class Users
         end
 
         if password
-          if Token.verifyPassword(user["password"]) == password
+          if Token.verifyPassword(user["password"], password)
             new_password_token = Token.generatePasswordHash(new_password)
             arr_field_user << "password"
             arr_data_user << new_password_token.to_s
@@ -229,7 +229,7 @@ class Users
           raise Exception.new("El codigo no existe para el correo o ya fue usado")
         end
 
-        if Token.verifyPassword(code_active["password"]) == old_password
+        if Token.verifyPassword(code_active["password"], old_password)
           new_password_token = Token.generatePasswordHash(new_password)
           user_id = code_active.has_key?("user_id") ? code_active.not_nil!["user_id"] : nil
 
@@ -383,7 +383,7 @@ class Users
       user_id = Authentication.current_session(env.request.headers["token"])
 
       begin
-        time = Time.now
+        time = Time.local
         earned_referrals = DB_K
           .select([:code_reference_id])
           .table(:code_used)

@@ -924,7 +924,7 @@ class Shop
       minDistance = env.params.query.has_key?("minDistance") ? env.params.query["minDistance"].to_f : 0.0
       last_offers_array = last_offers.split(",")
       begin
-        time = Time.now Time::Location.load("America/Mexico_City")
+        time = Time.local Time::Location.load("America/Mexico_City")
         time_paser = "#{time}".split(" ").first
 
         get_offers = MONGO.aggregate([

@@ -1,24 +1,28 @@
 version: 1.0
 shards:
+  bindata:
+    github: spider-gazelle/bindata
+    version: 1.2.0
+
   bson:
     github: jeromegn/bson.cr
     version: 0.1.5
 
   db:
     github: crystal-lang/crystal-db
-    version: 0.5.1
+    version: 0.8.0
 
   exception_page:
     github: crystal-loot/exception_page
-    version: 0.1.2
+    version: 0.1.4
 
   jwt:
     github: crystal-community/jwt
-    version: 0.4.0
+    version: 1.4.0
 
   kemal:
     github: kemalcr/kemal
-    version: 0.25.2
+    version: 0.26.1
 
   kemal-auth-token:
     github: akwiatkowski/kemal-auth-token
@@ -30,11 +34,15 @@ shards:
 
   mongo:
     github: kimvex/mongodb-crystal
-    commit: d00dbfabf8dca30d0a01c9e2d068105c326294c4
+    commit: 7914bf400555483dfebeca13ff59920b8683461e
 
   mysql:
     github: crystal-lang/crystal-mysql
-    version: 0.5.1
+    version: 0.10.0
+
+  openssl_ext:
+    github: stakach/openssl_ext
+    version: 1.2.0
 
   pool:
     github: ysbaddaden/pool
