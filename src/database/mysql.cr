@@ -452,6 +452,37 @@ class Database
     @select_concat = ""
   end
 
+# This examples of the funciotion for migrations
+# and form for using
+#
+# Database = Db.new
+# 
+# Database.create_table? table: :usersK,
+#   column: [
+#     Database.row(row: :id, type: :int, is_null: true, auto_increment: true),
+#     Database.row(row: :email, type: :char, size: 1000, is_null: false),
+#     Database.row(row: :fullname, type: :string, size: 1000, is_null: false),
+#     Database.row(row: :password, type: :int, size: 200, is_null: false, default: "1234"),
+#     Database.row(row: :active_days, type: :bool , is_null: false),
+#     Database.row(row: :active_days, type: :time, default: :now, is_null: false)
+#   ],
+#   foreign: [:id, :images, :id],
+#   engine: "INNODB",
+#   unique: :id
+#  
+#   
+# Database.alter_add table: :usersK, 
+#   column: [
+#     Database.row(row: :tis, type: :bool, is_null: false, first: :fullname, default: nil), 
+#     Database.row(row: :fullname, type: :string, size: 300, is_null: true, after: :fullname)
+#   ]
+# 
+# Database.alter_change table: :usersK, column: [[:fullname, Database.row(row: :fullname_new, type: :string, size: 300, is_null: true)]]
+# 
+# Database.drop_column table: :usersK, column: [:fullname]
+# 
+# Database.drop_table table: [:usersK, :shops]
+
   def runMigration
     create_table table: :schema_db,
       column: [
