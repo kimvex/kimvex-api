@@ -9,6 +9,32 @@ class Database
   @db : DB::Database
   @action_sql = ""
   @select_concat = ""
+  @values = {
+    "boolean"   => "BOOLEAN",
+    "bool"      => "BOOLEAN",
+    "string"    => "VARCHAR",
+    "text"      => "VARCHAR",
+    "varchar"   => "VARCHAR",
+    "character" => "CHARACTER",
+    "char"      => "CHARACTER",
+    "smallint"  => "SMALLINT",
+    "integer"   => "INTEGER",
+    "int"       => "INTEGER",
+    "decimal"   => "DECIMAL",
+    "numeric"   => "NUMERIC",
+    "num"       => "NUMERIC",
+    "number"    => "NUMERIC",
+    "real"      => "REAL",
+    "float"     => "FLOAT",
+    "double"    => "DOUBLE PRECISION",
+    "date"      => "DATE",
+    "time"      => "TIME",
+    "timestamp" => "TIMESTAMP",
+    "clob"      => "CLOB",
+    "blob"      => "BLOB",
+  }
+  @migration_last_version = 0
+  @list_migration = [] of String
 
   def initialize
     @db = DB.open "mysql://root@localhost:3306/serviciotest"
@@ -378,8 +404,6 @@ class Database
       end
     end
 
-    puts "paso hasta aqui"
-
     convert_to_hash = Hash(String, JSON::Any).from_json(json_data)
     convert_to_hash.each do |key, value|
       begin
@@ -426,5 +450,139 @@ class Database
     @table = ""
     @action_sql = ""
     @select_concat = ""
+  end
+
+  def runMigration
+    create_table table: :schema_db,
+      column: [
+        row(row: :id, type: :int, is_null: false, auto_increment: true),
+        row(row: :version, type: :int, is_null: false, default: 0)
+      ],
+      unique: :id,
+      primary: :id,
+      engine: "INNODB",
+
+    version_schema = select([
+      :version
+    ])
+    .table(:schema_db)
+    .first
+
+    @migration_last_version = version_schema.not_nil![:version]
+  end
+
+  def endMigration
+    @list_migration.each{ |migration|
+      @db.exec migration
+    }
+
+    @db.exec "UPDATE schema_db SET version = #{@migration_last_version}"
+  end
+
+  def create_table?(*elements, table = "", column = [] of String, foreign = [] of Symbol, unique = "", primary = "", engine = "INNODB", migration = 0)
+    foreign_str = foreign.size > 0 ? ", FOREIGN KEY(#{foreign[0]}) REFERENCES #{foreign[1]}(#{foreign[2]})" : ""
+    in_unique = !unique.to_s.empty? ? ", UNIQUE(#{unique})" : ""
+    in_primary = !primary.to_s.empty? ? ", PRIMARY KEY(#{primary})" : ""
+
+    if migration < @migration_last_version
+      @list_migration << "CREATE TABLE IF NOT EXISTS #{table}(#{column.map { |values| values }.join(", ")}#{in_unique}#{foreign_str},#{in_primary}) ENGINE=#{engine};"
+      @migration_last_version = migration
+    end
+  end
+
+  def alter_add(*elements, table = "", column = [] of String, migration = 0)
+    column.each { |row|
+      if migration < @migration_last_version
+        @list_migration << "ALTER TABLE #{table} ADD #{row}"
+        @migration_last_version = migration
+      end
+    }
+  end
+
+  def alter_modify(*elements, table = "", column = [] of String, migration = 0)
+    column.each { |row|
+      if migration < @migration_last_version
+        @list_migration << "ALTER TABLE #{table} MODIFY #{row}"
+        @migration_last_version = migration
+      end
+    }
+  end
+
+  def alter_change(*elements, table = "", column = [] of Array(String), migration = 0)
+    column.each { |row|
+      if migration < @migration_last_version
+        @list_migration << "ALTER TABLE #{table} CHANGE #{row[0]} #{row[1]}"
+        @migration_last_version = migration
+      end
+    }
+  end
+
+  def drop_column(*elemetns, table = "", column = [] of Symbol, migration = 0)
+    column.each { |col|
+      if migration < @migration_last_version
+        @list_migration << "ALTER TABLE #{table} DROP #{col}"
+        @migration_last_version = migration
+      end
+    }
+  end
+
+  def drop_table(table = [] of Symbol, migration = 0)
+    if migration < @migration_last_version
+      @list_migration << "DROP TABLE IF EXISTS #{table.join(", ")}"
+      @migration_last_version = migration
+    end
+  end
+
+  def row(*elements, row, type, enumValues = [] of (String | Int32 | Int8 | Int64), size = "", is_null = false, default = "", after = "", first = "", auto_increment = false)
+    type_size = "#{@values["#{type}"]}#{addSize(type) ? "(#{size})" : ""}"
+    in_auto_increment = "#{auto_increment ? " AUTO_INCREMENT" : ""}"
+    is_null = "#{is_null ? "NOT NULL" : "NULL"}"
+    in_after = "#{!after.to_s.empty? ? " AFTER #{after}" : ""}"
+    in_first = "#{!first.to_s.empty? ? " FIRST" : ""}"
+    firts_default = !default.to_s.empty? ? " DEFAULT #{type_default(default)}" : ""
+    in_default = "#{default.nil? ? " DEFAULT #{type_default(default)}" : firts_default}"
+    "#{row} #{type_size} #{is_null}#{in_after}#{in_first}#{in_auto_increment}#{in_default}"
+  end
+
+  # Float64
+  # Int32
+  # String
+  # Bool
+  private def type_default(default)
+    case default.class.to_s
+    when "Float64"
+      default
+    when "Int32"
+      default
+    when "String"
+      "(\"#{default}\")"
+    when "Bool"
+      default
+    when "Nil"
+      "NULL"
+    when "Symbol"
+      "NOW()"
+    end
+  end
+
+  private def addSize(type)
+    case "#{type}"
+    when "string"
+      true
+    when "text"
+      true
+    when "varchar"
+      true
+    when "character"
+      true
+    when "char"
+      true
+    when "clob"
+      true
+    when "blob"
+      true
+    else
+      false
+    end
   end
 end
