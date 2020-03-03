@@ -452,78 +452,86 @@ class Database
     @select_concat = ""
   end
 
-# This examples of the funciotion for migrations
-# and form for using
-#
-# Database = Db.new
-# 
-# Database.create_table? table: :usersK,
-#   column: [
-#     Database.row(row: :id, type: :int, is_null: true, auto_increment: true),
-#     Database.row(row: :email, type: :char, size: 1000, is_null: false),
-#     Database.row(row: :fullname, type: :string, size: 1000, is_null: false),
-#     Database.row(row: :password, type: :int, size: 200, is_null: false, default: "1234"),
-#     Database.row(row: :active_days, type: :bool , is_null: false),
-#     Database.row(row: :active_days, type: :time, default: :now, is_null: false)
-#   ],
-#   foreign: [:id, :images, :id],
-#   engine: "INNODB",
-#   unique: :id
-#  
-#   
-# Database.alter_add table: :usersK, 
-#   column: [
-#     Database.row(row: :tis, type: :bool, is_null: false, first: :fullname, default: nil), 
-#     Database.row(row: :fullname, type: :string, size: 300, is_null: true, after: :fullname)
-#   ]
-# 
-# Database.alter_change table: :usersK, column: [[:fullname, Database.row(row: :fullname_new, type: :string, size: 300, is_null: true)]]
-# 
-# Database.drop_column table: :usersK, column: [:fullname]
-# 
-# Database.drop_table table: [:usersK, :shops]
+  # This examples of the funciotion for migrations
+  # and form for using
+  #
+  # Database = Db.new
+  #
+  # Database.create_table? table: :usersK,
+  #   column: [
+  #     Database.row(row: :id, type: :int, is_null: true, auto_increment: true),
+  #     Database.row(row: :email, type: :char, size: 1000, is_null: false),
+  #     Database.row(row: :fullname, type: :string, size: 1000, is_null: false),
+  #     Database.row(row: :password, type: :int, size: 200, is_null: false, default: "1234"),
+  #     Database.row(row: :active_days, type: :bool , is_null: false),
+  #     Database.row(row: :active_days, type: :time, default: :now, is_null: false)
+  #   ],
+  #   foreign: [:id, :images, :id],
+  #   engine: "INNODB",
+  #   unique: :id
+  #
+  #
+  # Database.alter_add table: :usersK,
+  #   column: [
+  #     Database.row(row: :tis, type: :bool, is_null: false, first: :fullname, default: nil),
+  #     Database.row(row: :fullname, type: :string, size: 300, is_null: true, after: :fullname)
+  #   ]
+  #
+  # Database.alter_change table: :usersK, column: [[:fullname, Database.row(row: :fullname_new, type: :string, size: 300, is_null: true)]]
+  #
+  # Database.drop_column table: :usersK, column: [:fullname]
+  #
+  # Database.drop_table table: [:usersK, :shops]
 
   def runMigration
-    create_table table: :schema_db,
+    create_table? table: :schema_db,
       column: [
         row(row: :id, type: :int, is_null: false, auto_increment: true),
-        row(row: :version, type: :int, is_null: false, default: 0)
+        row(row: :version, type: :int, is_null: false, default: 0),
       ],
       unique: :id,
       primary: :id,
       engine: "INNODB",
+      migration: 0
 
-    version_schema = select([
-      :version
+    self.endMigration
+
+    version_schema = self.select([
+      :version,
     ])
-    .table(:schema_db)
-    .first
+      .table(:schema_db)
+      .first
 
-    @migration_last_version = version_schema.not_nil![:version]
+    puts "#{version_schema.size} #{version_schema} version??????"
+    self.table(:schema_db).insert([:version], [0]).execute if version_schema.size < 1
   end
 
   def endMigration
-    @list_migration.each{ |migration|
+    puts @list_migration
+    @list_migration.each { |migration|
+      puts migration
       @db.exec migration
     }
 
+    puts "UPDATE schema_db SET version = #{@migration_last_version} >> create schema"
     @db.exec "UPDATE schema_db SET version = #{@migration_last_version}"
   end
 
   def create_table?(*elements, table = "", column = [] of String, foreign = [] of Symbol, unique = "", primary = "", engine = "INNODB", migration = 0)
-    foreign_str = foreign.size > 0 ? ", FOREIGN KEY(#{foreign[0]}) REFERENCES #{foreign[1]}(#{foreign[2]})" : ""
-    in_unique = !unique.to_s.empty? ? ", UNIQUE(#{unique})" : ""
-    in_primary = !primary.to_s.empty? ? ", PRIMARY KEY(#{primary})" : ""
+    insert_v = [] of String
+    insert_v << "FOREIGN KEY(#{foreign[0]}) REFERENCES #{foreign[1]}(#{foreign[2]})" if foreign.size > 0
+    insert_v << "UNIQUE(#{unique})" if !unique.to_s.empty?
+    insert_v << "PRIMARY KEY(#{primary})" if !primary.to_s.empty?
 
-    if migration < @migration_last_version
-      @list_migration << "CREATE TABLE IF NOT EXISTS #{table}(#{column.map { |values| values }.join(", ")}#{in_unique}#{foreign_str},#{in_primary}) ENGINE=#{engine};"
+    if migration == 0 || migration > @migration_last_version
+      @list_migration << "CREATE TABLE IF NOT EXISTS #{table}(#{column.map { |values| values }.join(", ")}#{insert_v.size > 0 ? ", #{insert_v.join(", ")}" : ""}) ENGINE=#{engine};"
       @migration_last_version = migration
     end
   end
 
   def alter_add(*elements, table = "", column = [] of String, migration = 0)
     column.each { |row|
-      if migration < @migration_last_version
+      if migration == 0 || migration > @migration_last_version
         @list_migration << "ALTER TABLE #{table} ADD #{row}"
         @migration_last_version = migration
       end
@@ -532,7 +540,7 @@ class Database
 
   def alter_modify(*elements, table = "", column = [] of String, migration = 0)
     column.each { |row|
-      if migration < @migration_last_version
+      if migration == 0 || migration > @migration_last_version
         @list_migration << "ALTER TABLE #{table} MODIFY #{row}"
         @migration_last_version = migration
       end
@@ -541,7 +549,7 @@ class Database
 
   def alter_change(*elements, table = "", column = [] of Array(String), migration = 0)
     column.each { |row|
-      if migration < @migration_last_version
+      if migration == 0 || migration > @migration_last_version
         @list_migration << "ALTER TABLE #{table} CHANGE #{row[0]} #{row[1]}"
         @migration_last_version = migration
       end
@@ -550,7 +558,7 @@ class Database
 
   def drop_column(*elemetns, table = "", column = [] of Symbol, migration = 0)
     column.each { |col|
-      if migration < @migration_last_version
+      if migration == 0 || migration > @migration_last_version
         @list_migration << "ALTER TABLE #{table} DROP #{col}"
         @migration_last_version = migration
       end
@@ -558,7 +566,7 @@ class Database
   end
 
   def drop_table(table = [] of Symbol, migration = 0)
-    if migration < @migration_last_version
+    if migration >= @migration_last_version
       @list_migration << "DROP TABLE IF EXISTS #{table.join(", ")}"
       @migration_last_version = migration
     end
@@ -567,7 +575,7 @@ class Database
   def row(*elements, row, type, enumValues = [] of (String | Int32 | Int8 | Int64), size = "", is_null = false, default = "", after = "", first = "", auto_increment = false)
     type_size = "#{@values["#{type}"]}#{addSize(type) ? "(#{size})" : ""}"
     in_auto_increment = "#{auto_increment ? " AUTO_INCREMENT" : ""}"
-    is_null = "#{is_null ? "NOT NULL" : "NULL"}"
+    is_null = "#{is_null ? "NULL" : "NOT NULL"}"
     in_after = "#{!after.to_s.empty? ? " AFTER #{after}" : ""}"
     in_first = "#{!first.to_s.empty? ? " FIRST" : ""}"
     firts_default = !default.to_s.empty? ? " DEFAULT #{type_default(default)}" : ""
@@ -586,7 +594,7 @@ class Database
     when "Int32"
       default
     when "String"
-      "(\"#{default}\")"
+      "\"#{default}\""
     when "Bool"
       default
     when "Nil"
