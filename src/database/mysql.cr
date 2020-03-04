@@ -29,9 +29,11 @@ class Database
     "double"    => "DOUBLE PRECISION",
     "date"      => "DATE",
     "time"      => "TIME",
+    "datetime"  => "DATETIME",
     "timestamp" => "TIMESTAMP",
     "clob"      => "CLOB",
     "blob"      => "BLOB",
+    "enum"      => "ENUM",
   }
   @migration_last_version = 0
   @list_migration = [] of String
@@ -502,8 +504,9 @@ class Database
       .table(:schema_db)
       .first
 
-    puts "#{version_schema.size} #{version_schema} version??????"
-    self.table(:schema_db).insert([:version], [0]).execute if version_schema.size < 1
+    puts "#{version_schema.size} #{version_schema} version?????? #{version_schema.size < 1 ? "es menor, porque?" : "es mayor, esta bien"}"
+    @migration_last_version = version_schema.size < 1 ? 0 : "#{version_schema["version"].not_nil!}".to_i
+    self.table(:schema_db).insert([:version], [version_schema.size < 1 ? 0 : "#{version_schema["version"].not_nil!}".to_i]).execute if version_schema.size < 1
   end
 
   def endMigration
@@ -513,13 +516,19 @@ class Database
       @db.exec migration
     }
 
-    puts "UPDATE schema_db SET version = #{@migration_last_version} >> create schema"
-    @db.exec "UPDATE schema_db SET version = #{@migration_last_version}"
+    if @migration_last_version != 0
+      puts "UPDATE schema_db SET version = #{@migration_last_version} >> create schema"
+      @db.exec "UPDATE schema_db SET version = #{@migration_last_version}"
+    end
   end
 
-  def create_table?(*elements, table = "", column = [] of String, foreign = [] of Symbol, unique = "", primary = "", engine = "INNODB", migration = 0)
+  def create_table?(*elements, table = "", column = [] of String, foreign = [] of Array(Array(Symbol)), unique = "", primary = "", engine = "INNODB", migration = 0) forall T
     insert_v = [] of String
-    insert_v << "FOREIGN KEY(#{foreign[0]}) REFERENCES #{foreign[1]}(#{foreign[2]})" if foreign.size > 0
+    puts foreign
+    foreign.each { |f|
+      puts f
+      insert_v << "FOREIGN KEY(#{f[0]}) REFERENCES #{f[1]}(#{f[2]})" if f.size > 0
+    }
     insert_v << "UNIQUE(#{unique})" if !unique.to_s.empty?
     insert_v << "PRIMARY KEY(#{primary})" if !primary.to_s.empty?
 
@@ -572,8 +581,13 @@ class Database
     end
   end
 
-  def row(*elements, row, type, enumValues = [] of (String | Int32 | Int8 | Int64), size = "", is_null = false, default = "", after = "", first = "", auto_increment = false)
-    type_size = "#{@values["#{type}"]}#{addSize(type) ? "(#{size})" : ""}"
+  def row(*elements, row, type, enum_values = [] of (String | Int32 | Int8 | Int64), size = "", is_null = false, default = "", after = "", first = "", auto_increment = false)
+    type_size = ""
+    if @values["#{type}"] == "ENUM"
+      type_size = "ENUM(#{enum_values.map { |e| "\"#{e}\"" }.join(", ")})"
+    else
+      type_size = "#{@values["#{type}"]}#{addSize(type) && !size.to_s.empty? ? "(#{size})" : ""}"
+    end
     in_auto_increment = "#{auto_increment ? " AUTO_INCREMENT" : ""}"
     is_null = "#{is_null ? "NULL" : "NOT NULL"}"
     in_after = "#{!after.to_s.empty? ? " AFTER #{after}" : ""}"
@@ -619,6 +633,8 @@ class Database
     when "clob"
       true
     when "blob"
+      true
+    when "int"
       true
     else
       false
